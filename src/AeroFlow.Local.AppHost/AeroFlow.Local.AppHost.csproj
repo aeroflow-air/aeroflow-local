@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.5.2" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>aeroflow-local-apphost-2026-10-05</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.5.2" />
+    <PackageReference Include="Aspire.Hosting.Azure.ServiceBus" Version="9.5.2" />
+    <PackageReference Include="Aspire.Hosting.Keycloak" Version="9.5.2-preview.1.25522.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Sibling clone layout (required for a fresh clone to restore/build):
+        parent/
+          aeroflow-local/          (this repo)
+          svc-gate-allocation/
+          svc-flight-status/
+      See README.md "Clone layout".
+    -->
+    <ProjectReference Include="../../../svc-gate-allocation/src/AeroFlow.GateAllocation/AeroFlow.GateAllocation.csproj" />
+    <ProjectReference Include="../../../svc-flight-status/src/AeroFlow.FlightStatus/AeroFlow.FlightStatus.csproj" />
+
+    <ProjectReference Include="../AeroFlow.Local.OpsDashboard/AeroFlow.Local.OpsDashboard.csproj" />
+    <ProjectReference Include="../placeholders/AeroFlow.BaggageReclaim/AeroFlow.BaggageReclaim.csproj" />
+    <ProjectReference Include="../placeholders/AeroFlow.Turnaround/AeroFlow.Turnaround.csproj" />
+    <ProjectReference Include="../placeholders/AeroFlow.Cleaning/AeroFlow.Cleaning.csproj" />
+    <ProjectReference Include="../placeholders/AeroFlow.Catering/AeroFlow.Catering.csproj" />
+    <ProjectReference Include="../placeholders/AeroFlow.Pushback/AeroFlow.Pushback.csproj" />
+    <ProjectReference Include="../placeholders/AeroFlow.Terminal/AeroFlow.Terminal.csproj" />
+  </ItemGroup>
+
+</Project>
