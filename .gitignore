@@ -1,0 +1,28 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+*.DotSettings.user
+project.lock.json
+artifacts/
+TestResults/
+*.nupkg
+*.snupkg
+
+## Aspire / secrets
+**/appsettings.*.local.json
+**/secrets.json
+
+## OS / IDE
+.DS_Store
+.idea/
+*.swp
+.vscode/*
+!.vscode/extensions.json
+
+## Containers
+**/Config.json.bak
