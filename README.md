@@ -7,10 +7,11 @@ Production hosting stays on Azure Container Apps via `workload.yaml`. This repo 
 ## Prerequisites
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (8.0.4xx or later)
-- A container runtime (Docker Desktop, Podman, or equivalent) — required for the Service Bus emulator and Keycloak
+- **Docker Desktop** (or another free container runtime) **running** — Service Bus emulator, SQL Server companion, and Keycloak
+- About **4 GB free RAM** for the SQL Server image used by the Service Bus emulator (plus headroom for Keycloak and the .NET projects)
 - Git
 
-Optional: [Aspire workload / CLI](https://learn.microsoft.com/dotnet/aspire/fundamentals/setup-tooling) for `aspire run`. Plain `dotnet run` on the AppHost is enough.
+Optional: [Aspire workload / CLI](https://learn.microsoft.com/dotnet/aspire/fundamentals/setup-tooling) for `aspire run`. Plain `dotnet run` on the AppHost is enough — **no paid tooling**.
 
 ## Clone layout (required)
 
@@ -35,19 +36,106 @@ cd aeroflow-local
 
 **Why not submodules?** Aspire needs compile-time project references for typed `AddProject<Projects.*>` and a smooth F5 experience. Sibling clones keep each `svc-*` repo independent (own CI, own releases) while still giving a one-command whole-platform run. Submodules would pin commits and add friction for day-to-day service work; package references would require publishing every local change. Documented siblings are the lightest option that still compiles.
 
-## One command
+## Run it locally (first time)
+
+All of this is **zero-cost** open-source tooling (no paid Aspire or Azure subscriptions required for the happy path).
+
+### 1. Clone the sibling layout
 
 ```bash
-dotnet run --project src/AeroFlow.Local.AppHost
+mkdir -p ~/aeroflow && cd ~/aeroflow
+# either:
+gh repo clone aeroflow-air/aeroflow-local
+gh repo clone aeroflow-air/svc-gate-allocation
+gh repo clone aeroflow-air/svc-flight-status
+# or:
+git clone https://github.com/aeroflow-air/aeroflow-local.git
+git clone https://github.com/aeroflow-air/svc-gate-allocation.git
+git clone https://github.com/aeroflow-air/svc-flight-status.git
+cd aeroflow-local
 ```
 
-Or from the AppHost directory:
+### 2. Build
 
 ```bash
-dotnet run
+dotnet build AeroFlow.Local.sln
 ```
 
-The Aspire dashboard opens automatically (see `launchSettings.json`). Every resource should show as healthy once containers and projects are up.
+### 3. Run the AppHost (HTTP profile)
+
+```bash
+cd src/AeroFlow.Local.AppHost
+dotnet run --launch-profile http
+```
+
+The `http` profile sets `ASPIRE_ALLOW_UNSECURED_TRANSPORT=true` so Aspire accepts an HTTP dashboard URL without a dev certificate.
+
+**HTTPS option:** trust a local cert once, then use the `https` profile:
+
+```bash
+dotnet dev-certs https --trust
+dotnet run --launch-profile https
+```
+
+### 4. First-run image pulls
+
+On the first start Docker will pull (free public images):
+
+- `mcr.microsoft.com/azure-messaging/servicebus-emulator:1.1.2`
+- `mcr.microsoft.com/mssql/server:2022-latest`
+- `quay.io/keycloak/keycloak:26.3`
+
+SQL + the emulator can take a few minutes; wait until the dashboard shows resources as **Running**.
+
+### 5. Aspire dashboard
+
+Watch the AppHost console for a line like:
+
+```text
+Login to the dashboard at http://localhost:15134/login?t=<token>
+```
+
+Open that URL (token is required). You should see **identity**, **messaging** (+ topic/subscription + `messaging-mssql`), **ops-dashboard**, the two real `svc-*` projects, and the six placeholders — all **Running**.
+
+### 6. Expected endpoints
+
+| Target | Paths | Expected |
+|--------|-------|----------|
+| Placeholders + ops-dashboard | `/health`, `/alive`, `/ping` | `200` |
+| `svc-gate-allocation` | `/health`, `/api/gates/ping` | `200` (`/alive` and `/ping` are not mapped yet) |
+| `svc-flight-status` | `/health`, `/api/flights/ping` | `200` |
+| Keycloak (`identity`) | `http://localhost:8080` (e.g. `/realms/master`) | Admin / OIDC UI |
+
+Aspire assigns dynamic host ports for the two real services (their sibling `launchSettings` pin `:8080`, which would clash with Keycloak — the AppHost clears that host port). Placeholders use fixed ports **5101–5107** via their own `launchSettings.json`.
+
+### Troubleshooting
+
+**`ASPIRE_ALLOW_UNSECURED_TRANSPORT` / HTTPS validation error**  
+Using `http` without the env var: *"The 'applicationUrl' setting must be an https address…"*. Prefer `--launch-profile http` (already sets the env var), or trust a cert and use `https`.
+
+**Port clashes on `:8080` or `:5000`**  
+Keycloak owns **8080**. Real services must not also bind it (handled in AppHost). Placeholders without `launchSettings` used to race on Kestrel’s default **:5000** — each now has a unique profile port (5101–5107).
+
+**Service Bus emulator exits with `SQL DB Unhealthy`**  
+The emulator container must reach the SQL companion on the Aspire Docker network. On some **Linux / nested Docker** hosts, `iptables-legacy` can leave `FORWARD DROP` so container↔container traffic fails even when both containers look “Up”. **Linux-only** workaround (not needed on Docker Desktop for Mac/Windows in the usual setup):
+
+```bash
+sudo iptables-legacy -I FORWARD 1 -i br-+ -j ACCEPT
+sudo iptables-legacy -I FORWARD 2 -o br-+ -j ACCEPT
+```
+
+Then restart the AppHost. Also confirm Docker Desktop (or the daemon) is running and you have ~4 GB free RAM for SQL Server.
+
+**`docker` permission denied**  
+Add your user to the `docker` group (or use Docker Desktop’s integration), then open a new shell.
+
+## One command (after the first-time setup)
+
+```bash
+dotnet run --project src/AeroFlow.Local.AppHost --launch-profile http
+```
+
+Or from the AppHost directory: `dotnet run --launch-profile http`. The Aspire dashboard login URL is printed in the console.
 
 ## What runs
 

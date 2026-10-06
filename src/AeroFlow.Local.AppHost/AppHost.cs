@@ -30,11 +30,16 @@ var opsDashboard = builder.AddProject<Projects.AeroFlow_Local_OpsDashboard>("ops
 // Real services (sibling repos) + placeholders for services not yet forked
 // ---------------------------------------------------------------------------
 var gateAllocation = builder.AddProject<Projects.AeroFlow_GateAllocation>("svc-gate-allocation")
+    // Sibling launchSettings pin http://localhost:8080 (same as Keycloak). Clear the
+    // host port so Aspire assigns a free one; do not edit the sibling repos for local runs.
+    .WithEndpoint("http", e => e.Port = null)
     .WithReference(serviceBus)
     .WithReference(keycloak)
     .WaitFor(serviceBus);
 
 var flightStatus = builder.AddProject<Projects.AeroFlow_FlightStatus>("svc-flight-status")
+    // Same as gate-allocation: sibling pins :8080 which collides with identity/Keycloak.
+    .WithEndpoint("http", e => e.Port = null)
     .WithReference(serviceBus)
     .WithReference(keycloak)
     .WaitFor(serviceBus);
