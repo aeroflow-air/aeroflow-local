@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <ItemGroup>
     <ProjectReference Include="../../AeroFlow.Local.ServiceDefaults/AeroFlow.Local.ServiceDefaults.csproj" />
+    <ProjectReference Include="../../AeroFlow.Local.FlightEvents/AeroFlow.Local.FlightEvents.csproj" />
   </ItemGroup>
 </Project>

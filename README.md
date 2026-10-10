@@ -137,6 +137,29 @@ dotnet run --project src/AeroFlow.Local.AppHost --launch-profile http
 
 Or from the AppHost directory: `dotnet run --launch-profile http`. The Aspire dashboard login URL is printed in the console.
 
+## Live flight simulator
+
+`flight-simulator` (`src/AeroFlow.Local.FlightSimulator`) is a worker that makes the local airport busy. Once `messaging` is healthy it publishes flight lifecycle events to the `flight-events` topic as JSON: **Scheduled → (Delayed →) Boarding → Departed → Landed**, with **Cancelled** as a branch off Scheduled or Delayed. It uses the Aspire client integration (`Aspire.Azure.Messaging.ServiceBus`) against the local emulator, so it costs nothing.
+
+- **Contract:** `src/AeroFlow.Local.FlightEvents/FlightEvent.cs`. The message `Subject` and the `eventType` property hold the event type, and `CorrelationId` holds the flight id.
+- **Subscribers:** each placeholder has its own subscription (`flight-events/svc-<name>`, created by the AppHost) and logs every event it receives, for example `catering received Boarding for BA2699 LHR->FRA [SIM-00001]`.
+- **Traces:** in the dashboard, under **Traces**, a `flight-simulator: simulator tick` trace contains the send spans and the receive spans from all six placeholders.
+
+### Tune or pause
+
+Settings are in the `Simulator` section of `src/AeroFlow.Local.FlightSimulator/appsettings.json`. That file is reloaded while the simulator runs, so editing it takes effect without a restart. You can also set them as `Simulator__*` environment variables on the resource in `AppHost.cs`.
+
+| Setting | Default | Meaning |
+|---------|---------|---------|
+| `Enabled` | `true` | `false` pauses publishing (the loop idles and resumes when set back to `true`) |
+| `TickSeconds` | `5` | Seconds between ticks; each tick advances every active flight one step |
+| `NewFlightProbability` | `0.6` | Chance of scheduling a new flight per tick |
+| `MaxActiveFlights` | `8` | Cap on flights in progress |
+| `DelayProbability` / `CancelProbability` | `0.15` / `0.05` | Disruption rates |
+| `Seed` | `42` | Seeded random generator; the same seed replays the same flights (good for demos) |
+
+Example (AppHost): `.WithEnvironment("Simulator__TickSeconds", "2")` or `.WithEnvironment("Simulator__Enabled", "false")`.
+
 ## What runs
 
 | Resource | How | Notes |
@@ -146,7 +169,8 @@ Or from the AppHost directory: `dotnet run --launch-profile http`. The Aspire da
 | **ops-dashboard** | Placeholder minimal API in this repo | `/health`, `/alive`, `/ping` |
 | **svc-gate-allocation** | Sibling project reference | Real service |
 | **svc-flight-status** | Sibling project reference | Real service |
-| **svc-baggage-reclaim** … **svc-terminal** | Placeholders in `src/placeholders/` | `/health` + `/ping` until real repos exist |
+| **svc-baggage-reclaim** … **svc-terminal** | Placeholders in `src/placeholders/` | `/health` + `/ping`; log `flight-events` from their own subscription |
+| **flight-simulator** | Worker in this repo | Publishes simulated flight lifecycle events to `flight-events` |
 
 Service discovery and connection strings are injected by the AppHost — no hand-set local secrets for the happy path.
 

@@ -10,6 +10,13 @@ var serviceBus = builder.AddAzureServiceBus("messaging")
 var flightEvents = serviceBus.AddServiceBusTopic("flight-events");
 flightEvents.AddServiceBusSubscription("local-dev");
 
+// One subscription per placeholder so each gets its own copy of every flight event.
+string[] placeholderNames = ["svc-baggage-reclaim", "svc-turnaround", "svc-cleaning", "svc-catering", "svc-pushback", "svc-terminal"];
+foreach (var name in placeholderNames)
+{
+    flightEvents.AddServiceBusSubscription($"sub-{name}", subscriptionName: name);
+}
+
 // ---------------------------------------------------------------------------
 // Identity stand-in — Keycloak (free OSS container)
 // Why Keycloak: Apache-2.0, no cloud bill, Aspire.Hosting.Keycloak integration,
@@ -46,32 +53,46 @@ var flightStatus = builder.AddProject<Projects.AeroFlow_FlightStatus>("svc-fligh
 
 var baggage = builder.AddProject<Projects.AeroFlow_BaggageReclaim>("svc-baggage-reclaim")
     .WithReference(serviceBus)
+    .WithEnvironment("FlightEvents__Subscription", "svc-baggage-reclaim")
     .WithReference(keycloak)
     .WaitFor(serviceBus);
 
 var turnaround = builder.AddProject<Projects.AeroFlow_Turnaround>("svc-turnaround")
     .WithReference(serviceBus)
+    .WithEnvironment("FlightEvents__Subscription", "svc-turnaround")
     .WithReference(keycloak)
     .WaitFor(serviceBus);
 
 var cleaning = builder.AddProject<Projects.AeroFlow_Cleaning>("svc-cleaning")
     .WithReference(serviceBus)
+    .WithEnvironment("FlightEvents__Subscription", "svc-cleaning")
     .WithReference(keycloak)
     .WaitFor(serviceBus);
 
 var catering = builder.AddProject<Projects.AeroFlow_Catering>("svc-catering")
     .WithReference(serviceBus)
+    .WithEnvironment("FlightEvents__Subscription", "svc-catering")
     .WithReference(keycloak)
     .WaitFor(serviceBus);
 
 var pushback = builder.AddProject<Projects.AeroFlow_Pushback>("svc-pushback")
     .WithReference(serviceBus)
+    .WithEnvironment("FlightEvents__Subscription", "svc-pushback")
     .WithReference(keycloak)
     .WaitFor(serviceBus);
 
 var terminal = builder.AddProject<Projects.AeroFlow_Terminal>("svc-terminal")
     .WithReference(serviceBus)
+    .WithEnvironment("FlightEvents__Subscription", "svc-terminal")
     .WithReference(keycloak)
+    .WaitFor(serviceBus);
+
+// ---------------------------------------------------------------------------
+// Live flight simulator (#2): publishes lifecycle events to flight-events.
+// Tune or pause via Simulator__* env vars here or the project's appsettings.json.
+// ---------------------------------------------------------------------------
+builder.AddProject<Projects.AeroFlow_Local_FlightSimulator>("flight-simulator")
+    .WithReference(serviceBus)
     .WaitFor(serviceBus);
 
 builder.Build().Run();
