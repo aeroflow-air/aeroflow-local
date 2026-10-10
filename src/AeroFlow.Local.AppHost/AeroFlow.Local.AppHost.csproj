@@ -26,6 +26,7 @@
     <ProjectReference Include="../../../svc-flight-status/src/AeroFlow.FlightStatus/AeroFlow.FlightStatus.csproj" />
 
     <ProjectReference Include="../AeroFlow.Local.OpsDashboard/AeroFlow.Local.OpsDashboard.csproj" />
+    <ProjectReference Include="../AeroFlow.Local.FlightSimulator/AeroFlow.Local.FlightSimulator.csproj" />
     <ProjectReference Include="../placeholders/AeroFlow.BaggageReclaim/AeroFlow.BaggageReclaim.csproj" />
     <ProjectReference Include="../placeholders/AeroFlow.Turnaround/AeroFlow.Turnaround.csproj" />
     <ProjectReference Include="../placeholders/AeroFlow.Cleaning/AeroFlow.Cleaning.csproj" />
