@@ -126,8 +126,26 @@ sudo iptables-legacy -I FORWARD 2 -o br-+ -j ACCEPT
 
 Then restart the AppHost. Also confirm Docker Desktop (or the daemon) is running and you have ~4 GB free RAM for SQL Server.
 
+**Every container shows `Runtime unhealthy` / `dial tcp [::1]:2375 ... actively refused`**  
+Aspire is talking to the wrong Docker endpoint, usually a leftover `DOCKER_HOST=tcp://localhost:2375` or a non-default docker context. On Windows (PowerShell):
+
+```powershell
+echo $env:DOCKER_HOST                                              # should be empty
+[Environment]::SetEnvironmentVariable("DOCKER_HOST", $null, "User")  # clear it permanently
+Remove-Item Env:DOCKER_HOST -ErrorAction SilentlyContinue           # clear it in this session
+docker context use desktop-linux
+docker info                                                         # must succeed before dotnet run
+```
+
+Open a new terminal afterwards. On macOS/Linux: `unset DOCKER_HOST`, `docker context use default` (or `desktop-linux` with Docker Desktop).
+
+**`messaging` shows `Running (Unhealthy)` for 2–5 minutes on first start**  
+Expected: the Service Bus emulator waits for the SQL Server companion to initialise. Just wait; dependent services start once it turns healthy. If it persists beyond ~5 minutes, check the `messaging-mssql` console log in the dashboard and Docker Desktop's memory allocation (Settings → Resources; give it at least 4 GB).
+
 **`docker` permission denied**  
 Add your user to the `docker` group (or use Docker Desktop’s integration), then open a new shell.
+
+**Windows notes:** confirmed working with Docker Desktop (WSL 2 backend). Run commands from PowerShell, make sure `docker info` works first, and don't set `DOCKER_HOST`; the Linux iptables step above is not needed.
 
 ## One command (after the first-time setup)
 
