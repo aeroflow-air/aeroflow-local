@@ -1,6 +1,11 @@
+using AeroFlow.Local.FlightEvents;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+
+// Logs flight-events received on this placeholder's subscription (set by the AppHost).
+builder.AddFlightEventLogging("pushback");
 
 var app = builder.Build();
 

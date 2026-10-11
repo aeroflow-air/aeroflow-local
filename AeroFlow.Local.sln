@@ -29,6 +29,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AeroFlow.GateAllocation", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AeroFlow.FlightStatus", "..\svc-flight-status\src\AeroFlow.FlightStatus\AeroFlow.FlightStatus.csproj", "{003C1FCD-3AEE-4E96-929A-3F28B18B6569}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AeroFlow.Local.FlightEvents", "src\AeroFlow.Local.FlightEvents\AeroFlow.Local.FlightEvents.csproj", "{55E549B0-E7F1-4622-B8B9-1BE0C4F79AB8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AeroFlow.Local.FlightSimulator", "src\AeroFlow.Local.FlightSimulator\AeroFlow.Local.FlightSimulator.csproj", "{9B14CF66-E1BA-4445-9514-DF365CD9F498}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -82,6 +86,14 @@ Global
 		{003C1FCD-3AEE-4E96-929A-3F28B18B6569}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{003C1FCD-3AEE-4E96-929A-3F28B18B6569}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{003C1FCD-3AEE-4E96-929A-3F28B18B6569}.Release|Any CPU.Build.0 = Release|Any CPU
+		{55E549B0-E7F1-4622-B8B9-1BE0C4F79AB8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{55E549B0-E7F1-4622-B8B9-1BE0C4F79AB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{55E549B0-E7F1-4622-B8B9-1BE0C4F79AB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55E549B0-E7F1-4622-B8B9-1BE0C4F79AB8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9B14CF66-E1BA-4445-9514-DF365CD9F498}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B14CF66-E1BA-4445-9514-DF365CD9F498}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B14CF66-E1BA-4445-9514-DF365CD9F498}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B14CF66-E1BA-4445-9514-DF365CD9F498}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{38EFCE89-24D1-4D8D-BC31-4CEF1EA23ECB} = {355F1440-750E-4D14-ABC9-DE5C669308B4}
@@ -94,5 +106,7 @@ Global
 		{B7237390-284D-4FB6-BAF3-E4B27A86C08A} = {256F542F-9E94-4340-8CCE-264502B0D1F6}
 		{F3C71B9F-5C43-4B8D-96F7-F9536A3BCD04} = {256F542F-9E94-4340-8CCE-264502B0D1F6}
 		{14730A1F-8E7B-45FD-BE59-11C244D96490} = {256F542F-9E94-4340-8CCE-264502B0D1F6}
+		{55E549B0-E7F1-4622-B8B9-1BE0C4F79AB8} = {355F1440-750E-4D14-ABC9-DE5C669308B4}
+		{9B14CF66-E1BA-4445-9514-DF365CD9F498} = {355F1440-750E-4D14-ABC9-DE5C669308B4}
 	EndGlobalSection
 EndGlobal
