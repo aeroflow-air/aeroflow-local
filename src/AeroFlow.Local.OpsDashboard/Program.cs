@@ -1,5 +1,6 @@
 using AeroFlow.Local.OpsDashboard.Components;
 using AeroFlow.Local.OpsDashboard.Health;
+using AeroFlow.Local.OpsDashboard.Live;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,10 @@ builder.Services.AddHttpClient(ServiceHealthMonitor.HttpClientName, c => c.Timeo
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<ServiceHealthMonitor>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<ServiceHealthMonitor>());
+
+// Live airport (#73): ops-dashboard subscriptions on flight-events, baggage-events and gate-events feed an
+// in-memory AirportView. Listeners only start when the "messaging" connection exists.
+builder.AddLiveAirport();
 
 var app = builder.Build();
 
@@ -32,10 +37,13 @@ app.MapGet("/ping", () => Results.Ok(new
 {
     service = "ops-dashboard",
     status = "ok",
-    message = "AeroFlow live airport ops dashboard (shell, #72)"
+    message = "AeroFlow live airport ops dashboard (live, #73)"
 }));
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+
+// Expose for WebApplicationFactory in tests.
+public partial class Program;

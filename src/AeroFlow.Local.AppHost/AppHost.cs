@@ -19,6 +19,11 @@ flightEvents.AddServiceBusSubscription("sub-svc-baggage-reclaim", subscriptionNa
 var baggageEvents = serviceBus.AddServiceBusTopic("baggage-events");
 baggageEvents.AddServiceBusSubscription("sub-baggage-ops-dashboard", subscriptionName: "ops-dashboard");
 
+// Gate allocation owns gate-events (platform-handbook#77). The ops dashboard reads its own copy of every topic (#73).
+var gateEvents = serviceBus.AddServiceBusTopic("gate-events");
+gateEvents.AddServiceBusSubscription("sub-gate-ops-dashboard", subscriptionName: "ops-dashboard");
+flightEvents.AddServiceBusSubscription("sub-flight-ops-dashboard", subscriptionName: "ops-dashboard");
+
 // One subscription per placeholder so each gets its own copy of every flight event.
 string[] placeholderNames = ["svc-turnaround", "svc-cleaning", "svc-catering", "svc-pushback", "svc-terminal"];
 foreach (var name in placeholderNames)

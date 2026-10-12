@@ -1,3 +1,30 @@
-<Panel Title="Gates" Source="gate-events (#77) · svc-gate-allocation" Class="gates"
-       Empty="No gate data yet. Gate allocation doesn't publish gate-events until #77.">
+@inherits LiveComponent
+
+<Panel Title="Gates" Source="gate-events · svc-gate-allocation" Class="gates"
+       Empty="No gate events yet. Gates appear as svc-gate-allocation assigns them.">
+    @if (View.Gates.Count > 0)
+    {
+        <div class="tiles">
+            @foreach (var g in View.Gates.Values)
+            {
+                <div @key="g.Gate" class="tile @(g.FlightNumber is null ? "free" : "occupied")">
+                    <div class="tile-id">@g.Gate</div>
+                    @if (g.FlightNumber is null)
+                    {
+                        <div class="tile-sub">free</div>
+                    }
+                    else
+                    {
+                        <div class="tile-main mono">@g.FlightNumber</div>
+                        <div class="tile-sub">@Window(g)</div>
+                    }
+                </div>
+            }
+        </div>
+    }
 </Panel>
+
+@code {
+    private static string Window(GateTile g) =>
+        g.OnBlock is { } on && g.OffBlock is { } off ? $"{on.ToLocalTime():HH:mm}–{off.ToLocalTime():HH:mm}" : "";
+}

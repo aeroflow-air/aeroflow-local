@@ -1,3 +1,59 @@
+@inherits LiveComponent
+
 <Panel Title="Baggage belts" Source="baggage-events · svc-baggage-reclaim" Class="belts"
-       Empty="No belts yet. Wired up in #73 and #76.">
+       Empty="No belts in use. A belt appears when a flight lands at LHR.">
+    @if (View.Reclaims.Count > 0)
+    {
+        <div class="belt-list">
+            @foreach (var belt in View.Belts)
+            {
+                <div @key="belt.Key" class="belt">
+                    <div class="belt-id">Belt @belt.Key</div>
+                    <div class="belt-flights">
+                        @foreach (var r in belt)
+                        {
+                            <div @key="r.FlightId" class="belt-flight stage-@r.Stage.ToString().ToLowerInvariant()">
+                                <span class="mono">@r.FlightNumber</span>
+                                <span class="stage">@Stage(r)</span>
+                                <div class="bar"><div style="width:@Percent(r)%"></div></div>
+                                <span class="tile-sub">
+                                    @Times(r)
+                                    @if (r.BagsDelayed > 0)
+                                    {
+                                        <span class="warn"> · @r.BagsDelayed delayed</span>
+                                    }
+                                </span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
 </Panel>
+
+@code {
+    private static string Stage(BeltFlight r) => r.Stage switch
+    {
+        ReclaimStage.Assigned => "waiting for bags",
+        ReclaimStage.OnBelt => $"bags on belt ({r.BagCount})",
+        ReclaimStage.LastBag => "last bag on belt",
+        _ => $"complete {r.BagsCollected}/{r.BagCount}",
+    };
+
+    // Events give stages rather than bag-by-bag counts, so the bar shows stage progress.
+    private static int Percent(BeltFlight r) => r.Stage switch
+    {
+        ReclaimStage.Assigned => 5,
+        ReclaimStage.OnBelt => 40,
+        ReclaimStage.LastBag => 80,
+        _ => 100,
+    };
+
+    private static string Times(BeltFlight r) =>
+        string.Join(" · ", new[]
+        {
+            r.FirstBagAt is { } f ? $"first {f.ToLocalTime():HH:mm:ss}" : null,
+            r.LastBagAt is { } l ? $"last {l.ToLocalTime():HH:mm:ss}" : null,
+        }.Where(s => s is not null));
+}
