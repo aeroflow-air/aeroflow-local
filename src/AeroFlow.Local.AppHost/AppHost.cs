@@ -13,9 +13,14 @@ flightEvents.AddServiceBusSubscription("local-dev");
 // Real services each get their own subscription (svc-gate-allocation#4, svc-flight-status#6).
 flightEvents.AddServiceBusSubscription("sub-svc-gate-allocation", subscriptionName: "gate-allocation");
 flightEvents.AddServiceBusSubscription("sub-svc-flight-status", subscriptionName: "flight-status");
+flightEvents.AddServiceBusSubscription("sub-svc-baggage-reclaim", subscriptionName: "baggage-reclaim");
+
+// Baggage reclaim owns baggage-events (ADR-0013; platform-handbook#68). The ops dashboard (#53) reads its own copy.
+var baggageEvents = serviceBus.AddServiceBusTopic("baggage-events");
+baggageEvents.AddServiceBusSubscription("sub-baggage-ops-dashboard", subscriptionName: "ops-dashboard");
 
 // One subscription per placeholder so each gets its own copy of every flight event.
-string[] placeholderNames = ["svc-baggage-reclaim", "svc-turnaround", "svc-cleaning", "svc-catering", "svc-pushback", "svc-terminal"];
+string[] placeholderNames = ["svc-turnaround", "svc-cleaning", "svc-catering", "svc-pushback", "svc-terminal"];
 foreach (var name in placeholderNames)
 {
     flightEvents.AddServiceBusSubscription($"sub-{name}", subscriptionName: name);
@@ -58,8 +63,10 @@ var flightStatus = builder.AddProject<Projects.AeroFlow_FlightStatus>("svc-fligh
     .WaitFor(serviceBus);
 
 var baggage = builder.AddProject<Projects.AeroFlow_BaggageReclaim>("svc-baggage-reclaim")
+    // Real sibling repo now (platform-handbook#70); like the others its launchSettings pin :8080.
+    .WithEndpoint("http", e => e.Port = null)
     .WithReference(serviceBus)
-    .WithEnvironment("FlightEvents__Subscription", "svc-baggage-reclaim")
+    .WithEnvironment("FlightEvents__Subscription", "baggage-reclaim")
     .WithReference(keycloak)
     .WaitFor(serviceBus);
 
