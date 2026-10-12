@@ -106,6 +106,7 @@ Open that URL (token is required). You should see **identity**, **messaging** (+
 | Target | Paths | Expected |
 |--------|-------|----------|
 | Placeholders + ops-dashboard | `/health`, `/alive`, `/ping` | `200` |
+| ops-dashboard UI | `/` (Overview), `/board`, `/gates`, `/belts`, `/events` | Live airport dashboard (Blazor Server) |
 | `svc-gate-allocation` | `/health`, `/api/gates/ping` | `200` (`/alive` and `/ping` are not mapped yet) |
 | `svc-flight-status` | `/health`, `/api/flights/ping` | `200` |
 | `svc-baggage-reclaim` | `/health` | `200` (API arrives with platform-handbook#69) |
@@ -169,6 +170,7 @@ Or from the AppHost directory: `dotnet run --launch-profile http`. The Aspire da
 - **Real services:** `svc-gate-allocation` and `svc-flight-status` read their own subscriptions (`flight-events/gate-allocation` and `flight-events/flight-status`). Flight status adds each `Scheduled` flight and moves it through Boarding, Departed and Landed (`GET /api/flights/{flightNumber}`). Gate allocation gives each flight departing LHR a gate when it's scheduled, retimes it on a delay and frees it on Departed or Cancelled (`GET /api/gates`). Their logs show lines such as `BA2699 is now Departed after Departed` and `AllocateGate for BA2699 after Scheduled`.
 - **Baggage reclaim:** `svc-baggage-reclaim` reads `flight-events/baggage-reclaim`. When a flight lands at LHR it assigns a belt, simulates the bags coming off and publishes `BeltAssigned`, `BagsOnBelt`, the odd `BagDelayed`, `LastBagOnBelt` and `ReclaimComplete` to the **`baggage-events`** topic, which the ops dashboard will read through `baggage-events/ops-dashboard` (#53). Its logs show `AssignBelt for BA2699 after Landed` and `Published BagsOnBelt for BA2699 on belt 1`. Speed it up or slow it down with `Baggage__*` settings (for example `Baggage__TickSeconds`, `Baggage__BagsPerTick`; see the svc-baggage-reclaim README).
 - **Flight numbers** use two-character airline codes (`AF`, `BA`, `U2`, `FR`, `KL`, `LH`, `VS`, `BY`) because both services only accept that shape.
+- **Ops dashboard:** open the `ops-dashboard` endpoint from the Aspire dashboard. The shell (#72) has the layout, the nav and four panels (departures and arrivals, gates, baggage belts, event stream) that say what will feed them. The health strip in the top bar polls `/health` on flight status, gate allocation and baggage reclaim every 10 seconds through service discovery (green, amber or red; configure with `HealthStrip__*`). Live data arrives with #73 and #74.
 - **Traces:** in the dashboard, under **Traces**, a `flight-simulator: simulator tick` trace contains the send spans and the receive spans from the placeholders and real services.
 
 ### Tune or pause
@@ -192,7 +194,7 @@ Example (AppHost): `.WithEnvironment("Simulator__TickSeconds", "2")` or `.WithEn
 |----------|-----|--------|
 | **messaging** | Azure Service Bus via `RunAsEmulator()` | Free local emulator + SQL companion container; topic `flight-events` |
 | **identity** | Keycloak container (`Aspire.Hosting.Keycloak`) | Free OSS OIDC stand-in; stable host port **8080** |
-| **ops-dashboard** | Placeholder minimal API in this repo | `/health`, `/alive`, `/ping` |
+| **ops-dashboard** | Blazor Server app in this repo ([ADR-0016](https://github.com/aeroflow-air/platform-handbook/pull/81)) | Live airport UI at `/`, plus `/health`, `/alive`, `/ping` |
 | **svc-gate-allocation** | Sibling project reference | Real service; assigns and frees gates from `flight-events/gate-allocation` |
 | **svc-flight-status** | Sibling project reference | Real service; updates flight state from `flight-events/flight-status` |
 | **svc-baggage-reclaim** | Sibling project reference | Real service; belts and bags from `flight-events/baggage-reclaim`, publishes `baggage-events` |

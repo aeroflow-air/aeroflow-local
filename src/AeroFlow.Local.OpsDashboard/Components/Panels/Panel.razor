@@ -1,0 +1,27 @@
+<section class="panel @Class">
+    <header>
+        <h2>@Title</h2>
+        @if (!string.IsNullOrEmpty(Source))
+        {
+            <span class="source">@Source</span>
+        }
+    </header>
+    <div class="panel-body">
+        @if (ChildContent is null)
+        {
+            <p class="empty">@Empty</p>
+        }
+        else
+        {
+            @ChildContent
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public string? Source { get; set; }
+    [Parameter] public string Empty { get; set; } = "Waiting for data.";
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

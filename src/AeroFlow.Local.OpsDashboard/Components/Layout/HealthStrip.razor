@@ -1,0 +1,26 @@
+@implements IDisposable
+@inject ServiceHealthMonitor Monitor
+
+<ul class="health-strip" aria-label="Service health">
+    @if (Monitor.Snapshot.Count == 0)
+    {
+        <li class="health unknown">no services configured</li>
+    }
+    @foreach (var s in Monitor.Snapshot)
+    {
+        <li class="health @s.Health.ToString().ToLowerInvariant()" title="@Title(s)">
+            <span class="dot"></span>@s.Name.Replace("svc-", "")
+        </li>
+    }
+</ul>
+
+@code {
+    protected override void OnInitialized() => Monitor.Changed += OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private static string Title(ServiceStatus s) =>
+        s.CheckedAt is { } at ? $"{s.Name}: {s.Health} at {at.ToLocalTime():HH:mm:ss}" : $"{s.Name}: not checked yet";
+
+    public void Dispose() => Monitor.Changed -= OnChanged;
+}
