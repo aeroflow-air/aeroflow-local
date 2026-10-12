@@ -8,7 +8,8 @@ namespace AeroFlow.Local.FlightSimulator;
 /// </summary>
 public sealed class FlightGenerator(int seed, TimeProvider clock)
 {
-    private static readonly string[] Airlines = ["AF", "BA", "EZY", "RYR", "KLM", "DLH", "VIR", "TOM"];
+    // Two-character IATA designators: flight status and gate allocation accept "XX" + 1-4 digits only.
+    private static readonly string[] Airlines = ["AF", "BA", "U2", "FR", "KL", "LH", "VS", "BY"];
     private static readonly string[] Airports = ["LHR", "LGW", "MAN", "EDI", "AMS", "CDG", "FRA", "DUB", "JFK", "MAD", "BCN", "FCO"];
     private const string Home = "LHR";
 
