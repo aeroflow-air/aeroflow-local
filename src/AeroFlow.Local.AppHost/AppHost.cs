@@ -10,6 +10,10 @@ var serviceBus = builder.AddAzureServiceBus("messaging")
 var flightEvents = serviceBus.AddServiceBusTopic("flight-events");
 flightEvents.AddServiceBusSubscription("local-dev");
 
+// Real services each get their own subscription (svc-gate-allocation#4, svc-flight-status#6).
+flightEvents.AddServiceBusSubscription("sub-svc-gate-allocation", subscriptionName: "gate-allocation");
+flightEvents.AddServiceBusSubscription("sub-svc-flight-status", subscriptionName: "flight-status");
+
 // One subscription per placeholder so each gets its own copy of every flight event.
 string[] placeholderNames = ["svc-baggage-reclaim", "svc-turnaround", "svc-cleaning", "svc-catering", "svc-pushback", "svc-terminal"];
 foreach (var name in placeholderNames)
@@ -41,6 +45,7 @@ var gateAllocation = builder.AddProject<Projects.AeroFlow_GateAllocation>("svc-g
     // host port so Aspire assigns a free one; do not edit the sibling repos for local runs.
     .WithEndpoint("http", e => e.Port = null)
     .WithReference(serviceBus)
+    .WithEnvironment("FlightEvents__Subscription", "gate-allocation")
     .WithReference(keycloak)
     .WaitFor(serviceBus);
 
@@ -48,6 +53,7 @@ var flightStatus = builder.AddProject<Projects.AeroFlow_FlightStatus>("svc-fligh
     // Same as gate-allocation: sibling pins :8080 which collides with identity/Keycloak.
     .WithEndpoint("http", e => e.Port = null)
     .WithReference(serviceBus)
+    .WithEnvironment("FlightEvents__Subscription", "flight-status")
     .WithReference(keycloak)
     .WaitFor(serviceBus);
 

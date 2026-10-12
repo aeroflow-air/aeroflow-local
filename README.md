@@ -161,6 +161,8 @@ Or from the AppHost directory: `dotnet run --launch-profile http`. The Aspire da
 
 - **Contract:** `src/AeroFlow.Local.FlightEvents/FlightEvent.cs`. The message `Subject` and the `eventType` property hold the event type, and `CorrelationId` holds the flight id.
 - **Subscribers:** each placeholder has its own subscription (`flight-events/svc-<name>`, created by the AppHost) and logs every event it receives, for example `catering received Boarding for BA2699 LHR->FRA [SIM-00001]`.
+- **Real services:** `svc-gate-allocation` and `svc-flight-status` read their own subscriptions (`flight-events/gate-allocation` and `flight-events/flight-status`). Flight status adds each `Scheduled` flight and moves it through Boarding, Departed and Landed (`GET /api/flights/{flightNumber}`). Gate allocation gives each flight departing LHR a gate when it's scheduled, retimes it on a delay and frees it on Departed or Cancelled (`GET /api/gates`). Their logs show lines such as `BA2699 is now Departed after Departed` and `AllocateGate for BA2699 after Scheduled`.
+- **Flight numbers** use two-character airline codes (`AF`, `BA`, `U2`, `FR`, `KL`, `LH`, `VS`, `BY`) because both services only accept that shape.
 - **Traces:** in the dashboard, under **Traces**, a `flight-simulator: simulator tick` trace contains the send spans and the receive spans from all six placeholders.
 
 ### Tune or pause
@@ -185,8 +187,8 @@ Example (AppHost): `.WithEnvironment("Simulator__TickSeconds", "2")` or `.WithEn
 | **messaging** | Azure Service Bus via `RunAsEmulator()` | Free local emulator + SQL companion container; topic `flight-events` |
 | **identity** | Keycloak container (`Aspire.Hosting.Keycloak`) | Free OSS OIDC stand-in; stable host port **8080** |
 | **ops-dashboard** | Placeholder minimal API in this repo | `/health`, `/alive`, `/ping` |
-| **svc-gate-allocation** | Sibling project reference | Real service |
-| **svc-flight-status** | Sibling project reference | Real service |
+| **svc-gate-allocation** | Sibling project reference | Real service; assigns and frees gates from `flight-events/gate-allocation` |
+| **svc-flight-status** | Sibling project reference | Real service; updates flight state from `flight-events/flight-status` |
 | **svc-baggage-reclaim** … **svc-terminal** | Placeholders in `src/placeholders/` | `/health` + `/ping`; log `flight-events` from their own subscription |
 | **flight-simulator** | Worker in this repo | Publishes simulated flight lifecycle events to `flight-events` |
 
