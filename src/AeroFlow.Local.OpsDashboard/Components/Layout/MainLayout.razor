@@ -1,0 +1,22 @@
+@inherits LayoutComponentBase
+
+<div class="shell">
+    <header class="topbar">
+        <a class="brand" href="">✈ AeroFlow <span>Live airport · LHR</span></a>
+        <HealthStrip />
+    </header>
+    <nav class="nav">
+        <NavLink href="" Match="NavLinkMatch.All">Overview</NavLink>
+        <NavLink href="board">Board</NavLink>
+        <NavLink href="gates">Gates</NavLink>
+        <NavLink href="belts">Baggage belts</NavLink>
+        <NavLink href="events">Event stream</NavLink>
+    </nav>
+    <main class="content">
+        @Body
+    </main>
+</div>
+
+<div id="blazor-error-ui">
+    Something went wrong. <a href="" class="reload">Reload</a>
+</div>

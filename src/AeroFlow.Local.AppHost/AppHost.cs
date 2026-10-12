@@ -35,7 +35,7 @@ foreach (var name in placeholderNames)
 var keycloak = builder.AddKeycloak("identity", port: 8080);
 
 // ---------------------------------------------------------------------------
-// Ops dashboard API (placeholder)
+// Ops dashboard: live airport UI (Blazor Server, ADR-0016; #53)
 // ---------------------------------------------------------------------------
 var opsDashboard = builder.AddProject<Projects.AeroFlow_Local_OpsDashboard>("ops-dashboard")
     .WithReference(serviceBus)
@@ -99,6 +99,13 @@ var terminal = builder.AddProject<Projects.AeroFlow_Terminal>("svc-terminal")
     .WithEnvironment("FlightEvents__Subscription", "svc-terminal")
     .WithReference(keycloak)
     .WaitFor(serviceBus);
+
+// Ops dashboard (#72, ADR-0016) reads each real service through service discovery: health strip now,
+// initial state for the panels later (#74).
+opsDashboard
+    .WithReference(flightStatus)
+    .WithReference(gateAllocation)
+    .WithReference(baggage);
 
 // ---------------------------------------------------------------------------
 // Live flight simulator (#2): publishes lifecycle events to flight-events.
