@@ -22,6 +22,7 @@ parent/
   aeroflow-local/          ← this repository
   svc-gate-allocation/     ← https://github.com/aeroflow-air/svc-gate-allocation
   svc-flight-status/       ← https://github.com/aeroflow-air/svc-flight-status
+  svc-baggage-reclaim/     ← https://github.com/aeroflow-air/svc-baggage-reclaim
 ```
 
 Example:
@@ -31,6 +32,7 @@ mkdir -p ~/aeroflow && cd ~/aeroflow
 git clone https://github.com/aeroflow-air/aeroflow-local.git
 git clone https://github.com/aeroflow-air/svc-gate-allocation.git
 git clone https://github.com/aeroflow-air/svc-flight-status.git
+git clone https://github.com/aeroflow-air/svc-baggage-reclaim.git
 cd aeroflow-local
 ```
 
@@ -48,10 +50,12 @@ mkdir -p ~/aeroflow && cd ~/aeroflow
 gh repo clone aeroflow-air/aeroflow-local
 gh repo clone aeroflow-air/svc-gate-allocation
 gh repo clone aeroflow-air/svc-flight-status
+gh repo clone aeroflow-air/svc-baggage-reclaim
 # or:
 git clone https://github.com/aeroflow-air/aeroflow-local.git
 git clone https://github.com/aeroflow-air/svc-gate-allocation.git
 git clone https://github.com/aeroflow-air/svc-flight-status.git
+git clone https://github.com/aeroflow-air/svc-baggage-reclaim.git
 cd aeroflow-local
 ```
 
@@ -95,7 +99,7 @@ Watch the AppHost console for a line like:
 Login to the dashboard at http://localhost:15134/login?t=<token>
 ```
 
-Open that URL (token is required). You should see **identity**, **messaging** (+ topic/subscription + `messaging-mssql`), **ops-dashboard**, the two real `svc-*` projects, and the six placeholders — all **Running**.
+Open that URL (token is required). You should see **identity**, **messaging** (+ topic/subscription + `messaging-mssql`), **ops-dashboard**, the three real `svc-*` projects, and the five placeholders — all **Running**.
 
 ### 6. Expected endpoints
 
@@ -104,9 +108,10 @@ Open that URL (token is required). You should see **identity**, **messaging** (+
 | Placeholders + ops-dashboard | `/health`, `/alive`, `/ping` | `200` |
 | `svc-gate-allocation` | `/health`, `/api/gates/ping` | `200` (`/alive` and `/ping` are not mapped yet) |
 | `svc-flight-status` | `/health`, `/api/flights/ping` | `200` |
+| `svc-baggage-reclaim` | `/health` | `200` (API arrives with platform-handbook#69) |
 | Keycloak (`identity`) | `http://localhost:8080` (e.g. `/realms/master`) | Admin / OIDC UI |
 
-Aspire assigns dynamic host ports for the two real services (their sibling `launchSettings` pin `:8080`, which would clash with Keycloak — the AppHost clears that host port). Placeholders use fixed ports **5101–5107** via their own `launchSettings.json`.
+Aspire assigns dynamic host ports for the three real services (their sibling `launchSettings` pin `:8080`, which would clash with Keycloak — the AppHost clears that host port). Placeholders use fixed ports in **5101–5107** via their own `launchSettings.json`.
 
 ### Troubleshooting
 
@@ -162,8 +167,9 @@ Or from the AppHost directory: `dotnet run --launch-profile http`. The Aspire da
 - **Contract:** `src/AeroFlow.Local.FlightEvents/FlightEvent.cs`. The message `Subject` and the `eventType` property hold the event type, and `CorrelationId` holds the flight id.
 - **Subscribers:** each placeholder has its own subscription (`flight-events/svc-<name>`, created by the AppHost) and logs every event it receives, for example `catering received Boarding for BA2699 LHR->FRA [SIM-00001]`.
 - **Real services:** `svc-gate-allocation` and `svc-flight-status` read their own subscriptions (`flight-events/gate-allocation` and `flight-events/flight-status`). Flight status adds each `Scheduled` flight and moves it through Boarding, Departed and Landed (`GET /api/flights/{flightNumber}`). Gate allocation gives each flight departing LHR a gate when it's scheduled, retimes it on a delay and frees it on Departed or Cancelled (`GET /api/gates`). Their logs show lines such as `BA2699 is now Departed after Departed` and `AllocateGate for BA2699 after Scheduled`.
+- **Baggage reclaim:** `svc-baggage-reclaim` reads `flight-events/baggage-reclaim`. When a flight lands at LHR it assigns a belt, simulates the bags coming off and publishes `BeltAssigned`, `BagsOnBelt`, the odd `BagDelayed`, `LastBagOnBelt` and `ReclaimComplete` to the **`baggage-events`** topic, which the ops dashboard will read through `baggage-events/ops-dashboard` (#53). Its logs show `AssignBelt for BA2699 after Landed` and `Published BagsOnBelt for BA2699 on belt 1`. Speed it up or slow it down with `Baggage__*` settings (for example `Baggage__TickSeconds`, `Baggage__BagsPerTick`; see the svc-baggage-reclaim README).
 - **Flight numbers** use two-character airline codes (`AF`, `BA`, `U2`, `FR`, `KL`, `LH`, `VS`, `BY`) because both services only accept that shape.
-- **Traces:** in the dashboard, under **Traces**, a `flight-simulator: simulator tick` trace contains the send spans and the receive spans from all six placeholders.
+- **Traces:** in the dashboard, under **Traces**, a `flight-simulator: simulator tick` trace contains the send spans and the receive spans from the placeholders and real services.
 
 ### Tune or pause
 
@@ -189,7 +195,8 @@ Example (AppHost): `.WithEnvironment("Simulator__TickSeconds", "2")` or `.WithEn
 | **ops-dashboard** | Placeholder minimal API in this repo | `/health`, `/alive`, `/ping` |
 | **svc-gate-allocation** | Sibling project reference | Real service; assigns and frees gates from `flight-events/gate-allocation` |
 | **svc-flight-status** | Sibling project reference | Real service; updates flight state from `flight-events/flight-status` |
-| **svc-baggage-reclaim** … **svc-terminal** | Placeholders in `src/placeholders/` | `/health` + `/ping`; log `flight-events` from their own subscription |
+| **svc-baggage-reclaim** | Sibling project reference | Real service; belts and bags from `flight-events/baggage-reclaim`, publishes `baggage-events` |
+| **svc-turnaround** … **svc-terminal** | Placeholders in `src/placeholders/` | `/health` + `/ping`; log `flight-events` from their own subscription |
 | **flight-simulator** | Worker in this repo | Publishes simulated flight lifecycle events to `flight-events` |
 
 Service discovery and connection strings are injected by the AppHost — no hand-set local secrets for the happy path.
