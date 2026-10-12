@@ -1,3 +1,24 @@
+@inherits LiveComponent
+
 <Panel Title="Event stream" Source="all topics" Class="events"
-       Empty="No events yet. The last 200 events across topics appear here (#73, #76).">
+       Empty="No events yet. The latest events across all topics appear here.">
+    @if (View.Stream.Count > 0)
+    {
+        <ol class="stream">
+            @foreach (var e in View.Stream.Take(MaxRows))
+            {
+                <li @key="e.EventId" class="topic-@e.Topic">
+                    <span class="time mono">@e.At.ToLocalTime().ToString("HH:mm:ss")</span>
+                    <span class="topic">@e.Topic.Replace("-events", "")</span>
+                    <span class="type">@e.Type</span>
+                    <span class="mono">@e.FlightNumber</span>
+                    <span class="summary">@e.Summary</span>
+                </li>
+            }
+        </ol>
+    }
 </Panel>
+
+@code {
+    [Parameter] public int MaxRows { get; set; } = 40;
+}

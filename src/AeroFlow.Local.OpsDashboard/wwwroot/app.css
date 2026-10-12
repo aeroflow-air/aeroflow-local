@@ -32,3 +32,40 @@ h1 { margin: 0 0 1rem; font-size: 1.3rem; font-weight: 600; }
 .health.unreachable .dot { background: var(--bad); }
 #blazor-error-ui { display: none; position: fixed; bottom: 0; left: 0; right: 0; padding: .6rem 1rem; background: var(--bad); color: #fff; }
 @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .shell { grid-template-columns: 1fr; } .nav { flex-direction: row; overflow-x: auto; } }
+.mono { font-family: ui-monospace, "Cascadia Mono", monospace; }
+.board-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.board-cols h3 { margin: 0 0 .4rem; font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.board-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.board-table th { text-align: left; color: var(--muted); font-weight: 500; padding: .25rem .4rem; border-bottom: 1px solid var(--line); }
+.board-table td { padding: .3rem .4rem; border-bottom: 1px solid #1a2a3f; }
+.board-table tr.status-delayed td:last-child { color: var(--warn); }
+.board-table tr.status-cancelled td { color: var(--bad); text-decoration: line-through; }
+.board-table tr.status-boarding td:last-child { color: var(--accent); }
+.board-table tr.status-departed td, .board-table tr.status-landed td { color: var(--muted); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: .5rem; }
+.tile { border: 1px solid var(--line); border-radius: 8px; padding: .5rem; text-align: center; animation: flash 1.2s ease-out; }
+.tile.occupied { border-color: var(--accent); background: #1d2c40; }
+.tile.free { opacity: .7; }
+.tile-id { font-weight: 700; font-size: 1.1rem; }
+.tile-main { color: var(--accent); }
+.tile-sub { font-size: .72rem; color: var(--muted); }
+.warn { color: var(--warn); }
+.belt-list { display: flex; flex-direction: column; gap: .6rem; }
+.belt { display: grid; grid-template-columns: 70px 1fr; gap: .6rem; align-items: start; }
+.belt-id { font-weight: 700; color: var(--accent); padding-top: .2rem; }
+.belt-flights { display: flex; flex-direction: column; gap: .4rem; }
+.belt-flight { display: grid; grid-template-columns: 70px 1fr; gap: .1rem .6rem; font-size: .85rem; }
+.belt-flight .bar { grid-column: 1 / -1; height: 6px; background: #0b1420; border-radius: 3px; overflow: hidden; }
+.belt-flight .bar div { height: 100%; background: var(--accent); transition: width .6s; }
+.belt-flight.stage-complete .bar div { background: var(--ok); }
+.belt-flight .tile-sub { grid-column: 1 / -1; }
+.stream { list-style: none; margin: 0; padding: 0; font-size: .8rem; max-height: 420px; overflow-y: auto; }
+.stream li { display: grid; grid-template-columns: 64px 60px 110px 60px 1fr; gap: .4rem; padding: .25rem 0; border-bottom: 1px solid #1a2a3f; animation: flash 1.2s ease-out; }
+.stream .time { color: var(--muted); }
+.stream .topic { font-size: .7rem; text-transform: uppercase; padding: 0 .3rem; border-radius: 4px; align-self: center; text-align: center; }
+.stream li.topic-flight-events .topic { background: #1f3b5c; }
+.stream li.topic-gate-events .topic { background: #4a3a10; }
+.stream li.topic-baggage-events .topic { background: #1e4a33; }
+.stream .type { color: var(--accent); }
+.stream .summary { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@keyframes flash { from { background: #2b3f5c; } }

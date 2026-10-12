@@ -1,3 +1,48 @@
-<Panel Title="Departures & arrivals" Source="flight-events · svc-flight-status" Class="board"
-       Empty="No flights yet. Wired up in #73 (events) and #74 (initial state).">
+@inherits LiveComponent
+
+<Panel Title="Departures & arrivals" Source="flight-events · gate-events · baggage-events" Class="board"
+       Empty="No flights yet. Waiting for the flight simulator.">
+    @if (Rows(true).Any() || Rows(false).Any())
+    {
+        <div class="board-cols">
+            @foreach (var departures in new[] { true, false })
+            {
+                <div>
+                    <h3>@(departures ? "Departures" : "Arrivals")</h3>
+                    <table class="board-table">
+                        <thead><tr><th>Time</th><th>Flight</th><th>@(departures ? "To" : "From")</th><th>@(departures ? "Gate" : "Belt")</th><th>Status</th></tr></thead>
+                        <tbody>
+                            @foreach (var f in Rows(departures).Take(MaxRows))
+                            {
+                                <tr @key="f.FlightId" class="status-@f.Status.ToString().ToLowerInvariant()">
+                                    <td>@f.ScheduledDeparture.ToLocalTime().ToString("HH:mm")</td>
+                                    <td class="mono">@f.FlightNumber</td>
+                                    <td>@(departures ? f.Destination : f.Origin)</td>
+                                    <td class="mono">@((departures ? f.Gate : f.Belt) ?? "TBA")</td>
+                                    <td>@Status(f)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
 </Panel>
+
+@code {
+    [Parameter] public string HomeAirport { get; set; } = "LHR";
+    [Parameter] public int MaxRows { get; set; } = 12;
+
+    private IEnumerable<FlightRow> Rows(bool departures) =>
+        View.Flights.Values
+            .Where(f => string.Equals(departures ? f.Origin : f.Destination, HomeAirport, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(f => f.ScheduledDeparture);
+
+    private static string Status(FlightRow f) => f.Status switch
+    {
+        FlightEventType.Delayed => $"Delayed +{f.DelayMinutes}",
+        FlightEventType.Scheduled when f.DelayMinutes > 0 => $"Scheduled +{f.DelayMinutes}",
+        _ => f.Status.ToString(),
+    };
+}
