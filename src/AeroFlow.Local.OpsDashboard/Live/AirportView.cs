@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using AeroFlow.Local.FlightEvents;
+using AeroFlow.Local.OpsDashboard.Snapshot;
 
 namespace AeroFlow.Local.OpsDashboard.Live;
 
@@ -14,10 +15,21 @@ public sealed record FlightRow(
     int DelayMinutes,
     string? Gate,
     string? Belt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt)
+{
+    /// <summary>True when the row came from a service API on startup/refresh (#74), not from an event.</summary>
+    public bool FromSnapshot { get; init; }
+
+    /// <summary>Key used for rows loaded from svc-flight-status, which knows flight numbers but not the simulator's ids.</summary>
+    public static string SnapshotKey(string flightNumber) => $"api:{flightNumber}";
+}
 
 /// <summary>A gate the dashboard has seen in use. Free when <see cref="FlightNumber"/> is null.</summary>
-public sealed record GateTile(string Gate, string? FlightNumber, DateTimeOffset? OnBlock, DateTimeOffset? OffBlock, DateTimeOffset UpdatedAt);
+public sealed record GateTile(string Gate, string? FlightNumber, DateTimeOffset? OnBlock, DateTimeOffset? OffBlock, DateTimeOffset UpdatedAt)
+{
+    /// <summary>True when the tile came from svc-gate-allocation's API, not from a gate event.</summary>
+    public bool FromSnapshot { get; init; }
+}
 
 public enum ReclaimStage
 {
@@ -39,13 +51,18 @@ public sealed record BeltFlight(
     DateTimeOffset AssignedAt,
     DateTimeOffset? FirstBagAt,
     DateTimeOffset? LastBagAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt)
+{
+    /// <summary>True when the reclaim came from svc-baggage-reclaim's API, not from a baggage event.</summary>
+    public bool FromSnapshot { get; init; }
+}
 
 /// <summary>A line in the event stream.</summary>
 public sealed record EventRow(Guid EventId, DateTimeOffset At, string Topic, string Type, string FlightNumber, string Summary);
 
 /// <summary>
-/// Immutable picture of the live airport, built only from events. Every change goes through <see cref="AirportProjector"/>.
+/// Immutable picture of the live airport: seeded from the service APIs on startup (#74), then kept current by events.
+/// Every change goes through <see cref="AirportProjector"/>.
 /// </summary>
 public sealed record AirportView
 {
@@ -75,6 +92,9 @@ public sealed record AirportView
     public ImmutableQueue<Guid> SeenOrder { get; init; } = [];
 
     public long Version { get; init; }
+
+    /// <summary>What the last startup/refresh load from the service APIs found (#74).</summary>
+    public SnapshotStatus Snapshot { get; init; } = SnapshotStatus.NotLoaded;
 
     public IEnumerable<IGrouping<string, BeltFlight>> Belts =>
         Reclaims.Values.OrderBy(r => r.AssignedAt).GroupBy(r => r.Belt).OrderBy(g => g.Key, GateOrder.Instance);

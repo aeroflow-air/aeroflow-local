@@ -105,8 +105,8 @@ var terminal = builder.AddProject<Projects.AeroFlow_Terminal>("svc-terminal")
     .WithReference(keycloak)
     .WaitFor(serviceBus);
 
-// Ops dashboard (#72, ADR-0016) reads each real service through service discovery: health strip now,
-// initial state for the panels later (#74).
+// Ops dashboard (#72, ADR-0016) reads each real service through service discovery: the health strip and
+// the startup snapshot of flights, gates and belts (#74).
 opsDashboard
     .WithReference(flightStatus)
     .WithReference(gateAllocation)
