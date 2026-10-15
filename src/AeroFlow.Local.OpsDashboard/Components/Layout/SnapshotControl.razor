@@ -1,0 +1,37 @@
+@inherits LiveComponent
+@inject SnapshotLoader Loader
+
+@* Startup state from the service APIs (#74): when it last loaded, which sources failed, and a manual refresh. *@
+<div class="snapshot" title="@Title">
+    <span class="snapshot-status @(Status.Failed.Count > 0 ? "partial" : "")">@Label</span>
+    <button class="snapshot-refresh" @onclick="RefreshAsync" disabled="@_busy">@(_busy ? "Loading…" : "Refresh")</button>
+</div>
+
+@code {
+    private bool _busy;
+
+    private SnapshotStatus Status => View.Snapshot;
+
+    private string Label => Status.At is not { } at
+        ? "snapshot: loading"
+        : Status.Failed.Count == 0
+            ? $"snapshot {at.ToLocalTime():HH:mm:ss}"
+            : $"snapshot {at.ToLocalTime():HH:mm:ss} · no {string.Join(", ", Status.Failed.Keys.Order())}";
+
+    private string Title => Status.Failed.Count == 0
+        ? "Flights, gates and belts loaded from the service APIs; live events update them from there."
+        : string.Join("\n", Status.Failed.Select(f => $"{f.Key}: {f.Value}"));
+
+    private async Task RefreshAsync()
+    {
+        _busy = true;
+        try
+        {
+            await Loader.LoadAsync(CancellationToken.None);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

@@ -16,6 +16,12 @@ public sealed class DashboardHostTests(WebApplicationFactory<Program> factory) :
         Assert.NotNull(factory.Services.GetRequiredService<AirportViewStore>());
     }
 
+    [Fact]
+    public void Snapshot_hydrator_starts_with_the_dashboard()
+    {
+        Assert.Contains(factory.Services.GetServices<IHostedService>(), h => h is AeroFlow.Local.OpsDashboard.Snapshot.SnapshotHydrator);
+    }
+
     [Theory]
     [InlineData("/")]
     [InlineData("/board")]

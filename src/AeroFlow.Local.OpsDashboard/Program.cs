@@ -1,6 +1,7 @@
 using AeroFlow.Local.OpsDashboard.Components;
 using AeroFlow.Local.OpsDashboard.Health;
 using AeroFlow.Local.OpsDashboard.Live;
+using AeroFlow.Local.OpsDashboard.Snapshot;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,10 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<ServiceHealthMonit
 // Live airport (#73): ops-dashboard subscriptions on flight-events, baggage-events and gate-events feed an
 // in-memory AirportView. Listeners only start when the "messaging" connection exists.
 builder.AddLiveAirport();
+
+// Startup state (#74): load flights, gates and belts from the services' APIs through service discovery, so a restart
+// doesn't show an empty airport. Runs alongside the listeners; live events win. Also behind the Refresh button.
+builder.AddAirportSnapshot();
 
 var app = builder.Build();
 

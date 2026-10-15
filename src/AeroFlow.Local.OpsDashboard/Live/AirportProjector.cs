@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using AeroFlow.Local.FlightEvents;
+using AeroFlow.Local.OpsDashboard.Snapshot;
 
 namespace AeroFlow.Local.OpsDashboard.Live;
 
@@ -20,7 +21,10 @@ public static class AirportProjector
             return view;
         }
 
-        var existing = view.Flights.GetValueOrDefault(e.FlightId);
+        // A row loaded from svc-flight-status on startup is keyed by flight number; the first event for that flight
+        // takes it over (keeping its gate, belt and delay) and the event's own values win.
+        var snapshotKey = FlightRow.SnapshotKey(e.FlightNumber);
+        var existing = view.Flights.GetValueOrDefault(e.FlightId) ?? view.Flights.GetValueOrDefault(snapshotKey);
         var delay = e.EventType == FlightEventType.Delayed ? e.DelayMinutes ?? existing?.DelayMinutes ?? 0 : existing?.DelayMinutes ?? 0;
         var row = new FlightRow(
             e.FlightId, e.FlightNumber, e.Origin, e.Destination, e.ScheduledDeparture,
@@ -34,7 +38,7 @@ public static class AirportProjector
             _ => $"{e.Origin}→{e.Destination} {e.EventType.ToString().ToLowerInvariant()}",
         };
 
-        return Record(view with { Flights = view.Flights.SetItem(e.FlightId, row) }, e.EventId, e.OccurredAt, FlightTopic, e.EventType.ToString(), e.FlightNumber, summary);
+        return Record(view with { Flights = view.Flights.Remove(snapshotKey).SetItem(e.FlightId, row) }, e.EventId, e.OccurredAt, FlightTopic, e.EventType.ToString(), e.FlightNumber, summary);
     }
 
     public static AirportView Apply(AirportView view, GateEventMessage e)
@@ -93,9 +97,10 @@ public static class AirportProjector
         next = next with { UpdatedAt = e.OccurredAt };
 
         var flights = view.Flights;
-        if (flights.TryGetValue(e.FlightId, out var flight))
+        var flightKey = flights.ContainsKey(e.FlightId) ? e.FlightId : FlightRow.SnapshotKey(e.FlightNumber);
+        if (flights.TryGetValue(flightKey, out var flight))
         {
-            flights = flights.SetItem(e.FlightId, flight with { Belt = e.Belt });
+            flights = flights.SetItem(flightKey, flight with { Belt = e.Belt });
         }
 
         var summary = e.EventType switch
@@ -110,6 +115,62 @@ public static class AirportProjector
 
         return Record(view with { Reclaims = view.Reclaims.SetItem(e.FlightId, next), Flights = flights }, e.EventId, e.OccurredAt, BaggageTopic, e.EventType.ToString(), e.FlightNumber, summary);
     }
+
+    /// <summary>
+    /// Merge what the service APIs returned on startup or refresh (#74). Live data wins: anything an event has already
+    /// put in the view is kept, and only earlier snapshot rows are replaced. Sources that failed leave their part of
+    /// the view as it was. The event stream and de-duplication memory are not touched.
+    /// </summary>
+    public static AirportView Hydrate(AirportView view, AirportSnapshot snapshot)
+    {
+        var flights = view.Flights;
+        var live = flights.Values.Where(f => !f.FromSnapshot).Select(f => f.FlightNumber).ToHashSet(StringComparer.Ordinal);
+        flights = MergeFlights(flights, live, snapshot.Departures, f => Same(f.Origin, snapshot.HomeAirport));
+        flights = MergeFlights(flights, live, snapshot.Arrivals, f => Same(f.Destination, snapshot.HomeAirport));
+
+        var gates = snapshot.Gates.Match(
+            tiles => tiles.Aggregate(view.Gates, (acc, tile) =>
+                !acc.TryGetValue(tile.Gate, out var current) || current.FromSnapshot ? acc.SetItem(tile.Gate, tile) : acc),
+            _ => view.Gates);
+
+        var reclaims = snapshot.Belts.Match(
+            loaded => loaded.Aggregate(
+                view.Reclaims.RemoveRange(view.Reclaims.Values.Where(r => r.FromSnapshot).Select(r => r.FlightId)),
+                (acc, r) => acc.ContainsKey(r.FlightId) ? acc : acc.SetItem(r.FlightId, r)),
+            _ => view.Reclaims);
+
+        // Arrivals from svc-flight-status don't carry a belt; take it from the reclaim if the row has none.
+        flights = reclaims.Values.Aggregate(flights, (acc, r) =>
+        {
+            var key = acc.ContainsKey(r.FlightId) ? r.FlightId : FlightRow.SnapshotKey(r.FlightNumber);
+            return acc.TryGetValue(key, out var row) && row.Belt is null ? acc.SetItem(key, row with { Belt = r.Belt }) : acc;
+        });
+
+        var failed = snapshot.Failures;
+        var status = new SnapshotStatus(
+            snapshot.LoadedAt,
+            new[] { SnapshotSources.Departures, SnapshotSources.Arrivals, SnapshotSources.Gates, SnapshotSources.Belts }
+                .Where(s => !failed.ContainsKey(s))
+                .ToImmutableSortedSet(StringComparer.Ordinal),
+            failed);
+
+        return view with { Flights = flights, Gates = gates, Reclaims = reclaims, Snapshot = status, Version = view.Version + 1 };
+    }
+
+    private static ImmutableDictionary<string, FlightRow> MergeFlights(
+        ImmutableDictionary<string, FlightRow> flights,
+        HashSet<string> live,
+        SourceLoad<ImmutableList<FlightRow>> source,
+        Func<FlightRow, bool> inDirection) =>
+        source.Match(
+            rows => rows
+                .Where(r => !live.Contains(r.FlightNumber))
+                .Aggregate(
+                    flights.RemoveRange(flights.Values.Where(f => f.FromSnapshot && inDirection(f)).Select(f => f.FlightId)),
+                    (acc, r) => acc.SetItem(r.FlightId, r)),
+            _ => flights);
+
+    private static bool Same(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Drop finished flights and completed reclaims after their retention. Returns the same view if nothing expired.</summary>
     public static AirportView Expire(AirportView view, DateTimeOffset now)
