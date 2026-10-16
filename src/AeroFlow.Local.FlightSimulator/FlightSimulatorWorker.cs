@@ -23,6 +23,9 @@ public sealed partial class FlightSimulatorWorker(
         await using var sender = client.CreateSender(FlightEventTopics.FlightEvents);
         LogStarted(initial.Seed, initial.TickSeconds, initial.Enabled);
 
+        // Events the bus hasn't accepted yet, oldest first. A failed send keeps them here and the next tick retries
+        // them (same EventId, so duplicate detection drops any copy that did get through), so none are lost (ADR-0017).
+        var pending = new Queue<FlightEvent>();
         var wasPaused = false;
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -43,7 +46,7 @@ public sealed partial class FlightSimulatorWorker(
                     wasPaused = false;
                 }
 
-                await TickAsync(generator, sender, current, stoppingToken);
+                await TickAsync(generator, sender, current, pending, stoppingToken);
             }
 
             await Task.Delay(TimeSpan.FromSeconds(Math.Max(0.2, current.TickSeconds)), clock, stoppingToken)
@@ -51,21 +54,25 @@ public sealed partial class FlightSimulatorWorker(
         }
     }
 
-    private async Task TickAsync(FlightGenerator generator, ServiceBusSender sender, SimulatorOptions current, CancellationToken ct)
+    private async Task TickAsync(FlightGenerator generator, ServiceBusSender sender, SimulatorOptions current, Queue<FlightEvent> pending, CancellationToken ct)
     {
-        var events = generator.Tick(current);
-        if (events.Count == 0)
+        foreach (var evt in generator.Tick(current))
+        {
+            pending.Enqueue(evt);
+        }
+
+        if (pending.Count == 0)
         {
             return;
         }
 
         using var activity = ActivitySource.StartActivity("simulator tick", ActivityKind.Producer);
-        activity?.SetTag("aeroflow.events.count", events.Count);
+        activity?.SetTag("aeroflow.events.count", pending.Count);
         activity?.SetTag("aeroflow.flights.active", generator.ActiveCount);
 
         try
         {
-            foreach (var evt in events)
+            while (pending.TryPeek(out var evt))
             {
                 var message = new ServiceBusMessage(BinaryData.FromObjectAsJson(evt, FlightEventJson.Options))
                 {
@@ -78,6 +85,7 @@ public sealed partial class FlightSimulatorWorker(
                 message.ApplicationProperties["flightNumber"] = evt.FlightNumber;
 
                 await sender.SendMessageAsync(message, ct);
+                pending.Dequeue();
                 LogPublished(evt.EventType, evt.FlightNumber, evt.Origin, evt.Destination, evt.FlightId);
             }
         }
@@ -85,7 +93,7 @@ public sealed partial class FlightSimulatorWorker(
         {
             // Transient (e.g. emulator restarting); keep the loop alive and try again next tick.
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            LogPublishFailed(ex);
+            LogPublishFailed(ex, pending.Count);
         }
     }
 
@@ -101,6 +109,6 @@ public sealed partial class FlightSimulatorWorker(
     [LoggerMessage(Level = LogLevel.Information, Message = "Flight simulator resumed")]
     private partial void LogResumed();
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Publishing flight events failed; will retry next tick")]
-    private partial void LogPublishFailed(Exception ex);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Publishing flight events failed; {Pending} pending, will retry next tick")]
+    private partial void LogPublishFailed(Exception ex, int pending);
 }

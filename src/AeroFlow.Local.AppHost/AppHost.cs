@@ -7,7 +7,15 @@ var serviceBus = builder.AddAzureServiceBus("messaging")
     .RunAsEmulator();
 
 // Emulator health checks need at least one entity modelled.
-var flightEvents = serviceBus.AddServiceBusTopic("flight-events");
+// Duplicate detection on every topic (ADR-0017): publishers use deterministic MessageIds and retry failed sends,
+// so a send that reached the bus but reported failure is dropped here. Consumers still de-duplicate by EventId.
+static void DetectDuplicates(Aspire.Hosting.Azure.AzureServiceBusTopicResource topic)
+{
+    topic.RequiresDuplicateDetection = true;
+    topic.DuplicateDetectionHistoryTimeWindow = TimeSpan.FromMinutes(10);
+}
+
+var flightEvents = serviceBus.AddServiceBusTopic("flight-events").WithProperties(DetectDuplicates);
 flightEvents.AddServiceBusSubscription("local-dev");
 
 // Real services each get their own subscription (svc-gate-allocation#4, svc-flight-status#6).
@@ -16,11 +24,11 @@ flightEvents.AddServiceBusSubscription("sub-svc-flight-status", subscriptionName
 flightEvents.AddServiceBusSubscription("sub-svc-baggage-reclaim", subscriptionName: "baggage-reclaim");
 
 // Baggage reclaim owns baggage-events (ADR-0013; platform-handbook#68). The ops dashboard (#53) reads its own copy.
-var baggageEvents = serviceBus.AddServiceBusTopic("baggage-events");
+var baggageEvents = serviceBus.AddServiceBusTopic("baggage-events").WithProperties(DetectDuplicates);
 baggageEvents.AddServiceBusSubscription("sub-baggage-ops-dashboard", subscriptionName: "ops-dashboard");
 
 // Gate allocation owns gate-events (platform-handbook#77). The ops dashboard reads its own copy of every topic (#73).
-var gateEvents = serviceBus.AddServiceBusTopic("gate-events");
+var gateEvents = serviceBus.AddServiceBusTopic("gate-events").WithProperties(DetectDuplicates);
 gateEvents.AddServiceBusSubscription("sub-gate-ops-dashboard", subscriptionName: "ops-dashboard");
 flightEvents.AddServiceBusSubscription("sub-flight-ops-dashboard", subscriptionName: "ops-dashboard");
 
