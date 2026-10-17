@@ -16,7 +16,7 @@
                             {
                                 <tr @key="f.FlightId" class="status-@f.Status.ToString().ToLowerInvariant()">
                                     <td>@f.ScheduledDeparture.ToLocalTime().ToString("HH:mm")</td>
-                                    <td class="mono">@f.FlightNumber</td>
+                                    <td class="mono"><a href="journey/@f.FlightNumber">@f.FlightNumber</a></td>
                                     <td>@(departures ? f.Destination : f.Origin)</td>
                                     <td class="mono">@((departures ? f.Gate : f.Belt) ?? "TBA")</td>
                                     <td>@Status(f)</td>

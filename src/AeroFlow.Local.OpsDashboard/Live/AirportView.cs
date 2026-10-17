@@ -69,6 +69,21 @@ public sealed record BeltFlight(
 {
     /// <summary>True when the reclaim came from svc-baggage-reclaim's API, not from a baggage event.</summary>
     public bool FromSnapshot { get; init; }
+
+    /// <summary>
+    /// Bag progress as a percentage. Real progress (collected of expected) when both counts are known — the
+    /// belt API reports them; live events only carry counts at completion, so mid-reclaim this falls back to
+    /// stage progress until a snapshot refresh fills the counts in.
+    /// </summary>
+    public int ProgressPercent => BagCount is > 0 && BagsCollected is { } collected
+        ? Math.Clamp(collected * 100 / BagCount.Value, 0, 100)
+        : Stage switch
+        {
+            ReclaimStage.Assigned => 5,
+            ReclaimStage.OnBelt => 40,
+            ReclaimStage.LastBag => 80,
+            _ => 100,
+        };
 }
 
 /// <summary>A line in the event stream.</summary>

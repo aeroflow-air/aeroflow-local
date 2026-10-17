@@ -48,7 +48,7 @@ public sealed class SnapshotTests
     }
 
     [Fact]
-    public void Belts_map_each_reclaim_and_only_report_collected_once_complete()
+    public void Belts_map_each_reclaim_with_its_collected_count()
     {
         var reclaims = SnapshotMapper.Belts(
             [
@@ -57,7 +57,9 @@ public sealed class SnapshotTests
             ],
             T0);
 
-        Assert.Equal((ReclaimStage.OnBelt, 100, (int?)null, 2), (reclaims[0].Stage, reclaims[0].BagCount!.Value, reclaims[0].BagsCollected, reclaims[0].BagsDelayed));
+        Assert.Equal((ReclaimStage.OnBelt, 100, (int?)40, 2), (reclaims[0].Stage, reclaims[0].BagCount!.Value, reclaims[0].BagsCollected, reclaims[0].BagsDelayed));
+        Assert.Equal(40, reclaims[0].ProgressPercent);
+        Assert.Equal(97, reclaims[1].ProgressPercent);
         Assert.Equal((ReclaimStage.Complete, (int?)78, "2"), (reclaims[1].Stage, reclaims[1].BagsCollected, reclaims[1].Belt));
     }
 
