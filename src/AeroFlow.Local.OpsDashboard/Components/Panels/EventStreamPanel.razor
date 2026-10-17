@@ -2,23 +2,49 @@
 
 <Panel Title="Event stream" Source="all topics" Class="events"
        Empty="No events yet. The latest events across all topics appear here.">
-    @if (View.Stream.Count > 0)
+    <div class="filters">
+        <label>Topic
+            <select @bind="_topic">
+                <option value="">All topics</option>
+                <option value="flight-events">Flight</option>
+                <option value="gate-events">Gate</option>
+                <option value="baggage-events">Baggage</option>
+            </select>
+        </label>
+        <label>Flight
+            <input @bind="_flight" @bind:event="oninput" placeholder="e.g. BA123" />
+        </label>
+        @if (!string.IsNullOrWhiteSpace(_flight))
+        {
+            <a href="journey/@_flight.Trim()">Flight journey →</a>
+        }
+    </div>
+    @if (Rows.Any())
     {
         <ol class="stream">
-            @foreach (var e in View.Stream.Take(MaxRows))
+            @foreach (var e in Rows.Take(MaxRows))
             {
                 <li @key="e.EventId" class="topic-@e.Topic">
                     <span class="time mono">@e.At.ToLocalTime().ToString("HH:mm:ss")</span>
                     <span class="topic">@e.Topic.Replace("-events", "")</span>
                     <span class="type">@e.Type</span>
-                    <span class="mono">@e.FlightNumber</span>
+                    <a class="mono" href="journey/@e.FlightNumber">@e.FlightNumber</a>
                     <span class="summary">@e.Summary</span>
                 </li>
             }
         </ol>
     }
+    else if (View.Stream.Count > 0)
+    {
+        <p class="tile-sub">No events match the current filter.</p>
+    }
 </Panel>
 
 @code {
     [Parameter] public int MaxRows { get; set; } = 40;
+
+    private string _topic = "";
+    private string _flight = "";
+
+    private IEnumerable<EventRow> Rows => EventQueries.Filter(View, _topic, _flight);
 }

@@ -75,3 +75,7 @@ h1 { margin: 0 0 1rem; font-size: 1.3rem; font-weight: 600; }
 .snapshot-status.partial { color: #f0b429; }
 .snapshot-refresh { font: inherit; padding: .15rem .6rem; border-radius: 4px; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
 .snapshot-refresh:disabled { opacity: .5; cursor: default; }
+
+.filters { display: flex; gap: .8rem; align-items: end; flex-wrap: wrap; margin-bottom: .5rem; font-size: .8rem; }
+.filters label { display: flex; flex-direction: column; gap: .2rem; color: var(--muted); }
+.filters input, .filters select { background: #0b1420; color: inherit; border: 1px solid var(--line); border-radius: 4px; padding: .25rem .4rem; }

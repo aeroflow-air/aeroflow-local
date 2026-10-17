@@ -47,7 +47,7 @@ public static class SnapshotMapper
         belts
             .SelectMany(b => b.Reclaims.Select(r => new BeltFlight(
                 r.FlightId, r.FlightNumber, b.Id, Stage(r.Stage), r.BagCount,
-                Stage(r.Stage) == ReclaimStage.Complete ? r.BagsCollected : null,
+                r.BagsCollected,
                 r.BagsDelayed, r.LandedAt, null, null, now) { FromSnapshot = true }))
             .ToImmutableList();
 

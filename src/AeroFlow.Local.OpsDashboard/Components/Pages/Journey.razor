@@ -1,0 +1,13 @@
+@page "/journey/{FlightNumber}"
+
+<PageTitle>Flight @FlightNumber · AeroFlow</PageTitle>
+
+<h1>Flight journey</h1>
+
+<JourneyPanel FlightNumber="@FlightNumber" />
+
+<p><a href="events">← Event stream</a></p>
+
+@code {
+    [Parameter] public string FlightNumber { get; set; } = "";
+}

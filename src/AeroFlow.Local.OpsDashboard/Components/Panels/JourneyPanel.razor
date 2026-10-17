@@ -1,0 +1,39 @@
+@inherits LiveComponent
+
+<Panel Title="@($"Flight {FlightNumber}")" Source="flight-events · gate-events · baggage-events" Class="events"
+       Empty="No events for this flight in the current stream (the latest 200 across all topics are kept).">
+    @if (_flight is not null)
+    {
+        <p class="tile-sub">
+            @_flight.Origin → @_flight.Destination · scheduled @_flight.ScheduledDeparture.ToLocalTime().ToString("HH:mm") ·
+            status @_flight.Status@( _flight.DelayMinutes > 0 ? $" (+{_flight.DelayMinutes} min)" : "" )
+            @( _flight.Gate is not null ? $" · gate {_flight.Gate}" : "" )@( _flight.Belt is not null ? $" · belt {_flight.Belt}" : "" )
+        </p>
+    }
+    @if (_journey.Count == 0)
+    {
+        <p class="empty">No events for this flight in the current stream (the latest 200 across all topics are kept).</p>
+    }
+    @if (_journey.Count > 0)
+    {
+        <ol class="stream">
+            @foreach (var e in _journey)
+            {
+                <li @key="e.EventId" class="topic-@e.Topic">
+                    <span class="time mono">@e.At.ToLocalTime().ToString("HH:mm:ss")</span>
+                    <span class="topic">@e.Topic.Replace("-events", "")</span>
+                    <span class="type">@e.Type</span>
+                    <span class="summary">@e.Summary</span>
+                </li>
+            }
+        </ol>
+    }
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public string FlightNumber { get; set; } = "";
+
+    private FlightRow? _flight => View.Flights.Values.FirstOrDefault(f => string.Equals(f.FlightNumber, FlightNumber, StringComparison.OrdinalIgnoreCase));
+
+    private IReadOnlyList<EventRow> _journey => EventQueries.Journey(View, FlightNumber);
+}

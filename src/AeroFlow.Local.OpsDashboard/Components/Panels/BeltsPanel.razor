@@ -15,7 +15,7 @@
                             <div @key="r.FlightId" class="belt-flight stage-@r.Stage.ToString().ToLowerInvariant()">
                                 <span class="mono">@r.FlightNumber</span>
                                 <span class="stage">@Stage(r)</span>
-                                <div class="bar"><div style="width:@Percent(r)%"></div></div>
+                                <div class="bar"><div style="width:@r.ProgressPercent%"></div></div>
                                 <span class="tile-sub">
                                     @Times(r)
                                     @if (r.BagsDelayed > 0)
@@ -36,18 +36,9 @@
     private static string Stage(BeltFlight r) => r.Stage switch
     {
         ReclaimStage.Assigned => "waiting for bags",
-        ReclaimStage.OnBelt => $"bags on belt ({r.BagCount})",
-        ReclaimStage.LastBag => "last bag on belt",
+        ReclaimStage.OnBelt => r.BagsCollected is { } c && r.BagCount is { } n ? $"bags on belt ({c}/{n} collected)" : $"bags on belt ({r.BagCount})",
+        ReclaimStage.LastBag => r.BagsCollected is { } c && r.BagCount is { } n ? $"last bag on belt ({c}/{n} collected)" : "last bag on belt",
         _ => $"complete {r.BagsCollected}/{r.BagCount}",
-    };
-
-    // Events give stages rather than bag-by-bag counts, so the bar shows stage progress.
-    private static int Percent(BeltFlight r) => r.Stage switch
-    {
-        ReclaimStage.Assigned => 5,
-        ReclaimStage.OnBelt => 40,
-        ReclaimStage.LastBag => 80,
-        _ => 100,
     };
 
     private static string Times(BeltFlight r) =>
