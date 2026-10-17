@@ -7,11 +7,15 @@
         <div class="tiles">
             @foreach (var g in View.Gates.Values)
             {
-                <div @key="g.Gate" class="tile @(g.FlightNumber is null ? "free" : "occupied")">
+                <div @key="g.Gate" class="tile @g.State.ToString().ToLowerInvariant()">
                     <div class="tile-id">@g.Gate</div>
-                    @if (g.FlightNumber is null)
+                    @if (g.State == GateTileState.Closed)
                     {
-                        <div class="tile-sub">free</div>
+                        <div class="tile-sub">closed@(string.IsNullOrWhiteSpace(g.ClosedReason) ? "" : $" · {g.ClosedReason}")</div>
+                    }
+                    else if (g.FlightNumber is null)
+                    {
+                        <div class="tile-sub">open</div>
                     }
                     else
                     {

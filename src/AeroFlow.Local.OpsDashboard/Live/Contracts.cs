@@ -3,8 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace AeroFlow.Local.OpsDashboard.Live;
 
-// Local copies of the producers' wire contracts (svc-baggage-reclaim BaggageEvent, svc-gate-allocation GateEvent).
-// Keep in step until shared contracts are decided (platform-handbook#71). FlightEvent comes from AeroFlow.Local.FlightEvents.
+// Local copies of the producers' wire contracts (svc-baggage-reclaim BaggageEvent, svc-gate-allocation GateEvent),
+// kept per ADR-0019 (producer-owned contracts, consumer copies) and pinned by the producer-JSON tests
+// (platform-handbook#111). FlightEvent comes from AeroFlow.Local.FlightEvents.
 
 [JsonConverter(typeof(JsonStringEnumConverter<BaggageEventType>))]
 public enum BaggageEventType
@@ -41,7 +42,7 @@ public sealed record GateEventMessage(
     Guid EventId,
     GateEventType EventType,
     string FlightNumber,
-    string? FlightId,
+    string FlightId,
     string Gate,
     DateTimeOffset OccurredAt,
     string? PreviousGate = null,

@@ -25,7 +25,7 @@ public sealed record ArrivalDto(
     string Status,
     int DelayMinutes);
 
-public sealed record GateDto(string Id, string Status, IReadOnlyList<AllocationDto> Allocations);
+public sealed record GateDto(string Id, string Status, IReadOnlyList<AllocationDto> Allocations, string? ClosedReason = null);
 
 public sealed record AllocationDto(string FlightNumber, string Gate, DateTimeOffset OnBlock, DateTimeOffset OffBlock);
 

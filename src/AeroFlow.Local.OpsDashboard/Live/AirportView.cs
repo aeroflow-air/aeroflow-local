@@ -24,11 +24,25 @@ public sealed record FlightRow(
     public static string SnapshotKey(string flightNumber) => $"api:{flightNumber}";
 }
 
-/// <summary>A gate the dashboard has seen in use. Free when <see cref="FlightNumber"/> is null.</summary>
+public enum GateTileState
+{
+    Open,
+    Closed,
+    Occupied,
+}
+
+/// <summary>A gate the dashboard has seen. Open when free, closed when svc-gate-allocation says so, else occupied.</summary>
 public sealed record GateTile(string Gate, string? FlightNumber, DateTimeOffset? OnBlock, DateTimeOffset? OffBlock, DateTimeOffset UpdatedAt)
 {
     /// <summary>True when the tile came from svc-gate-allocation's API, not from a gate event.</summary>
     public bool FromSnapshot { get; init; }
+
+    /// <summary>Closed gates only come from the gate API snapshot; no gate event carries a closure.</summary>
+    public bool Closed { get; init; }
+
+    public string? ClosedReason { get; init; }
+
+    public GateTileState State => Closed ? GateTileState.Closed : FlightNumber is null ? GateTileState.Open : GateTileState.Occupied;
 }
 
 public enum ReclaimStage

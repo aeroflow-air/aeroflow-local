@@ -27,19 +27,23 @@ public sealed class SnapshotTests
     }
 
     [Fact]
-    public void Gate_tile_shows_the_flight_on_block_else_the_next_one_else_free_and_closed_gates_are_left_off()
+    public void Gate_tile_shows_the_flight_on_block_else_the_next_one_else_open_and_closed_gates_closed()
     {
         var tiles = SnapshotMapper.Gates(
             [
                 new GateDto("1", "Open", [Alloc("BA1", "1", -30, 30), Alloc("BA2", "1", 60, 120)]),
                 new GateDto("2", "Open", [Alloc("BA3", "2", -120, -60), Alloc("BA4", "2", 90, 150), Alloc("BA5", "2", 20, 80)]),
                 new GateDto("3", "Open", []),
-                new GateDto("4", "Closed", []),
+                new GateDto("4", "Closed", [], "maintenance"),
             ],
             T0);
 
-        Assert.Equal(["1", "2", "3"], tiles.Select(t => t.Gate));
-        Assert.Equal(["BA1", "BA5", null], tiles.Select(t => t.FlightNumber));
+        Assert.Equal(["1", "2", "3", "4"], tiles.Select(t => t.Gate));
+        Assert.Equal(["BA1", "BA5", null, null], tiles.Select(t => t.FlightNumber));
+        Assert.Equal(
+            [GateTileState.Occupied, GateTileState.Occupied, GateTileState.Open, GateTileState.Closed],
+            tiles.Select(t => t.State));
+        Assert.Equal("maintenance", tiles[3].ClosedReason);
         Assert.All(tiles, t => Assert.True(t.FromSnapshot));
     }
 

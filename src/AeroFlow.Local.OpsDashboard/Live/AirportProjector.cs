@@ -59,7 +59,7 @@ public static class AirportProjector
             : gates.SetItem(e.Gate, new GateTile(e.Gate, e.FlightNumber, e.OnBlock, e.OffBlock, e.OccurredAt));
 
         var flights = view.Flights;
-        var key = e.FlightId ?? flights.Values.FirstOrDefault(f => f.FlightNumber == e.FlightNumber)?.FlightId;
+        var key = !string.IsNullOrEmpty(e.FlightId) ? e.FlightId : flights.Values.FirstOrDefault(f => f.FlightNumber == e.FlightNumber)?.FlightId;
         if (key is not null && flights.TryGetValue(key, out var flight))
         {
             flights = flights.SetItem(key, flight with { Gate = e.EventType == GateEventType.GateReleased ? flight.Gate : e.Gate });
