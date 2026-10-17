@@ -45,7 +45,8 @@ h1 { margin: 0 0 1rem; font-size: 1.3rem; font-weight: 600; }
 .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: .5rem; }
 .tile { border: 1px solid var(--line); border-radius: 8px; padding: .5rem; text-align: center; animation: flash 1.2s ease-out; }
 .tile.occupied { border-color: var(--accent); background: #1d2c40; }
-.tile.free { opacity: .7; }
+.tile.open { opacity: .7; }
+.tile.closed { border-color: #8a3b3b; background: #2c1d1d; opacity: .85; }
 .tile-id { font-weight: 700; font-size: 1.1rem; }
 .tile-main { color: var(--accent); }
 .tile-sub { font-size: .72rem; color: var(--muted); }

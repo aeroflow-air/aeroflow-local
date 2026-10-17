@@ -24,14 +24,18 @@ public static class SnapshotMapper
             .ToImmutableList();
 
     /// <summary>
-    /// One tile per open gate: the allocation on block at <paramref name="now"/>, else the next one coming, else free.
-    /// Closed gates are left off (the live panel has no closed state yet).
+    /// One tile per gate: closed gates are shown closed (with their reason); for open gates the allocation on
+    /// block at <paramref name="now"/>, else the next one coming, else open.
     /// </summary>
     public static ImmutableList<GateTile> Gates(IEnumerable<GateDto> gates, DateTimeOffset now) =>
         gates
-            .Where(g => !string.Equals(g.Status, "Closed", StringComparison.OrdinalIgnoreCase))
             .Select(g =>
             {
+                if (string.Equals(g.Status, "Closed", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new GateTile(g.Id, null, null, null, now) { FromSnapshot = true, Closed = true, ClosedReason = g.ClosedReason };
+                }
+
                 var showing = g.Allocations.Where(a => a.OnBlock <= now && now < a.OffBlock)
                     .Concat(g.Allocations.Where(a => a.OnBlock > now).OrderBy(a => a.OnBlock))
                     .Take(1)

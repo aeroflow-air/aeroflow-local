@@ -113,7 +113,7 @@ public sealed class AirportProjectorTests
 
         var gate = TopicListener<GateEventMessage>.TryRead(BinaryData.FromString(
             """{"eventId":"8c6f2f1e-6f7e-4a52-9a43-5b9e0a3c2d11","eventType":"GateAssigned","flightNumber":"BA123","flightId":"SIM-1","gate":"12","occurredAt":"2026-10-12T18:00:00+00:00","onBlock":"2026-10-12T18:15:00+00:00","offBlock":"2026-10-12T19:00:00+00:00"}"""));
-        Assert.Equal((GateEventType.GateAssigned, "12"), (gate!.EventType, gate.Gate));
+        Assert.Equal((GateEventType.GateAssigned, "12", "SIM-1"), (gate!.EventType, gate.Gate, gate.FlightId));
 
         var bag = TopicListener<BaggageEventMessage>.TryRead(BinaryData.FromString(
             """{"eventId":"8c6f2f1e-6f7e-4a52-9a43-5b9e0a3c2d12","eventType":"BagsOnBelt","flightId":"SIM-1","flightNumber":"U2123","belt":"4","occurredAt":"2026-10-12T18:00:00+00:00","bagCount":90}"""));
