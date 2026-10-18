@@ -18,4 +18,8 @@
     <ProjectReference Include="../../src/AeroFlow.Local.OpsDashboard/AeroFlow.Local.OpsDashboard.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="Contracts\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
