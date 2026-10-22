@@ -15,18 +15,81 @@ public sealed class FlightGenerator(int seed, TimeProvider clock)
 
     private readonly Random _random = new(seed);
     private readonly List<ActiveFlight> _active = [];
+    private readonly List<FlightEvent> _injected = [];
+    private readonly object _lock = new();
     private int _sequence;
 
-    public int ActiveCount => _active.Count;
+    public int ActiveCount { get { lock (_lock) { return _active.Count; } } }
+
+    /// <summary>Flights a scenario can still act on (not yet boarding), for the dashboard's picker.</summary>
+    public IReadOnlyList<DelayableFlight> Delayable()
+    {
+        lock (_lock)
+        {
+            return _active
+                .Where(f => f.State is FlightEventType.Scheduled or FlightEventType.Delayed)
+                .Select(f => new DelayableFlight(f.FlightId, f.FlightNumber, f.Origin, f.Destination, f.ScheduledDeparture, f.DelayMinutes ?? 0))
+                .ToList();
+        }
+    }
+
+    /// <summary>
+    /// Demo scenario: delay an active flight by <paramref name="minutes"/> on top of any existing delay. Emits a normal
+    /// <c>Delayed</c> lifecycle event, published with the next tick, so every consumer reacts as it would to a simulated delay.
+    /// </summary>
+    public ScenarioResult Delay(string flightNumber, int minutes, string? reason)
+    {
+        if (minutes is < 1 or > 600)
+        {
+            return new ScenarioResult.Invalid("minutes must be between 1 and 600");
+        }
+
+        lock (_lock)
+        {
+            var flight = _active.FirstOrDefault(f => string.Equals(f.FlightNumber, flightNumber, StringComparison.OrdinalIgnoreCase));
+            if (flight is null)
+            {
+                return new ScenarioResult.NotFound($"{flightNumber} is not an active flight");
+            }
+
+            if (flight.State is not (FlightEventType.Scheduled or FlightEventType.Delayed))
+            {
+                return new ScenarioResult.Invalid($"{flight.FlightNumber} is {flight.State} and can no longer be delayed");
+            }
+
+            flight.State = FlightEventType.Delayed;
+            flight.DelayMinutes = (flight.DelayMinutes ?? 0) + minutes;
+            flight.Reason = string.IsNullOrWhiteSpace(reason) ? "Demo scenario" : reason.Trim();
+            var evt = ToEvent(flight, clock.GetUtcNow());
+            _injected.Add(evt);
+            return new ScenarioResult.Accepted(evt);
+        }
+    }
 
     public IReadOnlyList<FlightEvent> Tick(SimulatorOptions options)
     {
+        lock (_lock)
+        {
+            return TickLocked(options);
+        }
+    }
+
+    private IReadOnlyList<FlightEvent> TickLocked(SimulatorOptions options)
+    {
         var now = clock.GetUtcNow();
-        var events = new List<FlightEvent>();
+        // Scenario events go out first; a flight delayed by a scenario this tick doesn't also advance this tick.
+        var events = new List<FlightEvent>(_injected);
+        var justDelayed = _injected.Select(e => e.FlightId).ToHashSet();
+        _injected.Clear();
 
         // Advance existing flights first so a new flight's first event is Scheduled.
         foreach (var flight in _active.ToList())
         {
+            if (justDelayed.Contains(flight.FlightId))
+            {
+                continue;
+            }
+
             var next = Advance(flight, options);
             if (next is null)
             {
@@ -137,4 +200,13 @@ public sealed class FlightGenerator(int seed, TimeProvider clock)
         public int? DelayMinutes { get; set; }
         public string? Reason { get; set; }
     }
+}
+
+public sealed record DelayableFlight(string FlightId, string FlightNumber, string Origin, string Destination, DateTimeOffset ScheduledDeparture, int DelayMinutes);
+
+public abstract record ScenarioResult
+{
+    public sealed record Accepted(FlightEvent Event) : ScenarioResult;
+    public sealed record NotFound(string Error) : ScenarioResult;
+    public sealed record Invalid(string Error) : ScenarioResult;
 }
