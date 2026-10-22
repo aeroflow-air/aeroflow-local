@@ -244,3 +244,15 @@ Requires the sibling clone layout above.
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Demo scenarios
+
+The ops dashboard has a **Scenario** panel (Overview and Board pages) that asks the flight simulator to change the
+simulated airport. Effects arrive as normal `flight-events` lifecycle events, so every service reacts as it would to a
+simulated event. The dashboard itself still never publishes events or writes to the services.
+
+- **Delay a flight by N minutes:** pick a flight that hasn't started boarding, set the minutes (1–600) and press
+  *Delay flight*. The simulator publishes a `Delayed` event (delays add up). The board shows `Delayed +N`, and
+  svc-gate-allocation retimes the gate window (a `GateChanged` "retimed" event in the stream).
+- Simulator endpoints (local demo only, no auth): `GET /scenarios/flights`, `POST /scenarios/delay`
+  `{ "flightNumber": "BA123", "minutes": 45, "reason": "optional" }`.

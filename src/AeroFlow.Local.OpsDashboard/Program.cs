@@ -1,6 +1,7 @@
 using AeroFlow.Local.OpsDashboard.Components;
 using AeroFlow.Local.OpsDashboard.Health;
 using AeroFlow.Local.OpsDashboard.Live;
+using AeroFlow.Local.OpsDashboard.Scenarios;
 using AeroFlow.Local.OpsDashboard.Snapshot;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,10 @@ builder.AddLiveAirport();
 // Startup state (#74): load flights, gates and belts from the services' APIs through service discovery, so a restart
 // doesn't show an empty airport. Runs alongside the listeners; live events win. Also behind the Refresh button.
 builder.AddAirportSnapshot();
+
+// Demo scenarios: the one control that changes anything. It asks the flight simulator to act; the dashboard itself
+// still never publishes events or writes to the services.
+builder.AddScenarios();
 
 var app = builder.Build();
 

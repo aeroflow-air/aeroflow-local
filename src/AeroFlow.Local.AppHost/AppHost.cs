@@ -124,8 +124,12 @@ opsDashboard
 // Live flight simulator (#2): publishes lifecycle events to flight-events.
 // Tune or pause via Simulator__* env vars here or the project's appsettings.json.
 // ---------------------------------------------------------------------------
-builder.AddProject<Projects.AeroFlow_Local_FlightSimulator>("flight-simulator")
+var flightSimulator = builder.AddProject<Projects.AeroFlow_Local_FlightSimulator>("flight-simulator")
     .WithReference(serviceBus)
     .WaitFor(serviceBus);
+
+// Demo scenarios (platform-handbook#53): the dashboard's scenario control calls the simulator's /scenarios endpoints,
+// and the simulator publishes the resulting lifecycle events to flight-events as usual.
+opsDashboard.WithReference(flightSimulator);
 
 builder.Build().Run();

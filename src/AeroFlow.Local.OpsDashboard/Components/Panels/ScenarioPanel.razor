@@ -1,0 +1,70 @@
+@using AeroFlow.Local.OpsDashboard.Scenarios
+@inject ScenarioClient Scenarios
+
+@* Demo scenarios (platform-handbook#53): asks the flight simulator to act; effects arrive as normal events. *@
+<Panel Title="Scenario" Source="flight-simulator · /scenarios" Class="scenarios">
+    <div class="scenario-row">
+        <label>Delay
+            <select @bind="_flight">
+                <option value="">choose a flight…</option>
+                @foreach (var f in _flights)
+                {
+                    <option value="@f.FlightNumber">@f.FlightNumber @f.Origin→@f.Destination @f.ScheduledDeparture.ToLocalTime().ToString("HH:mm")@(f.DelayMinutes > 0 ? $" (+{f.DelayMinutes})" : "")</option>
+                }
+            </select>
+        </label>
+        <label>by <input type="number" min="1" max="600" @bind="_minutes" class="scenario-minutes" /> min</label>
+        <button @onclick="DelayAsync" disabled="@(_busy || string.IsNullOrEmpty(_flight))">Delay flight</button>
+        <button class="scenario-reload" @onclick="LoadAsync" disabled="@_busy" title="Reload the flights that can still be delayed">↻</button>
+    </div>
+    @if (_outcome is not null)
+    {
+        <div class="scenario-outcome @(_outcome.Ok ? "ok" : "error")">@_outcome.Message</div>
+    }
+    else if (_flights.Count == 0)
+    {
+        <div class="scenario-outcome">No flights to delay yet (only flights that haven't started boarding can be delayed).</div>
+    }
+</Panel>
+
+@code {
+    private IReadOnlyList<DelayableFlightDto> _flights = [];
+    private string _flight = "";
+    private int _minutes = 45;
+    private bool _busy;
+    private ScenarioOutcome? _outcome;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _busy = true;
+        try
+        {
+            _flights = await Scenarios.FlightsAsync(CancellationToken.None);
+            if (!_flights.Any(f => f.FlightNumber == _flight))
+            {
+                _flight = "";
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task DelayAsync()
+    {
+        _busy = true;
+        try
+        {
+            _outcome = await Scenarios.DelayAsync(_flight, _minutes, null, CancellationToken.None);
+        }
+        finally
+        {
+            _busy = false;
+        }
+
+        await LoadAsync();
+    }
+}

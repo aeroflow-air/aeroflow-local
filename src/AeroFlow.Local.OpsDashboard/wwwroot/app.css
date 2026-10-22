@@ -80,3 +80,13 @@ h1 { margin: 0 0 1rem; font-size: 1.3rem; font-weight: 600; }
 .filters { display: flex; gap: .8rem; align-items: end; flex-wrap: wrap; margin-bottom: .5rem; font-size: .8rem; }
 .filters label { display: flex; flex-direction: column; gap: .2rem; color: var(--muted); }
 .filters input, .filters select { background: #0b1420; color: inherit; border: 1px solid var(--line); border-radius: 4px; padding: .25rem .4rem; }
+/* Demo scenarios */
+.panel.scenarios { min-height: 0; margin-bottom: 1rem; }
+.scenario-row { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
+.scenario-row select, .scenario-row input, .scenario-row button { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: .3rem .5rem; }
+.scenario-row button { cursor: pointer; }
+.scenario-row button:disabled { opacity: .5; cursor: default; }
+.scenario-minutes { width: 4.5rem; }
+.scenario-outcome { margin-top: .6rem; font-size: .85rem; color: var(--muted); }
+.scenario-outcome.ok { color: #6fd39a; }
+.scenario-outcome.error { color: #ff8a8a; }

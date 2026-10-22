@@ -7,6 +7,7 @@ namespace AeroFlow.Local.FlightSimulator;
 
 public sealed partial class FlightSimulatorWorker(
     ServiceBusClient client,
+    FlightGenerator generator,
     IOptionsMonitor<SimulatorOptions> options,
     TimeProvider clock,
     ILogger<FlightSimulatorWorker> logger) : BackgroundService
@@ -19,7 +20,6 @@ public sealed partial class FlightSimulatorWorker(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var initial = options.CurrentValue;
-        var generator = new FlightGenerator(initial.Seed, clock);
         await using var sender = client.CreateSender(FlightEventTopics.FlightEvents);
         LogStarted(initial.Seed, initial.TickSeconds, initial.Enabled);
 
