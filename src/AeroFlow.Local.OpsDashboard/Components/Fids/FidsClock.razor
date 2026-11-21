@@ -1,0 +1,40 @@
+@implements IDisposable
+@inject TimeProvider Clock
+
+<div class="fids-clock-block">
+    <div class="fids-clock">@_time</div>
+    <div class="fids-date">@_date</div>
+</div>
+
+@code {
+    private ITimer? _timer;
+    private string _time = "";
+    private string _date = "";
+
+    protected override void OnInitialized() => Tick();
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _timer = Clock.CreateTimer(
+                _ => InvokeAsync(() =>
+                {
+                    Tick();
+                    StateHasChanged();
+                }),
+                null,
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromSeconds(1));
+        }
+    }
+
+    private void Tick()
+    {
+        var (time, date) = FidsClockFormat.Format(Clock.GetUtcNow(), TimeZoneInfo.Local);
+        _time = time;
+        _date = date;
+    }
+
+    public void Dispose() => _timer?.Dispose();
+}

@@ -106,7 +106,7 @@ Open that URL (token is required). You should see **identity**, **messaging** (+
 | Target | Paths | Expected |
 |--------|-------|----------|
 | Placeholders + ops-dashboard | `/health`, `/alive`, `/ping` | `200` |
-| ops-dashboard UI | `/` (Overview), `/board`, `/gates`, `/belts`, `/events` | Live airport dashboard (Blazor Server) |
+| ops-dashboard UI | `/` (ops workbench), `/board` (FIDS kiosk), `/gates`, `/belts`, `/events` | Live airport dashboard (Blazor Server) |
 | `svc-gate-allocation` | `/health`, `/api/gates/ping` | `200` (`/alive` and `/ping` are not mapped yet) |
 | `svc-flight-status` | `/health`, `/api/flights/ping` | `200` |
 | `svc-baggage-reclaim` | `/health` | `200` (API arrives with platform-handbook#69) |
@@ -172,7 +172,11 @@ Or from the AppHost directory: `dotnet run --launch-profile http`. The Aspire da
 - **Baggage reclaim:** `svc-baggage-reclaim` reads `flight-events/baggage-reclaim`. When a flight lands at LHR it assigns a belt, simulates the bags coming off and publishes `BeltAssigned`, `BagsOnBelt`, the odd `BagDelayed`, `LastBagOnBelt` and `ReclaimComplete` to the **`baggage-events`** topic, which the ops dashboard will read through `baggage-events/ops-dashboard` (#53). Its logs show `AssignBelt for BA2699 after Landed` and `Published BagsOnBelt for BA2699 on belt 1`. Speed it up or slow it down with `Baggage__*` settings (for example `Baggage__TickSeconds`, `Baggage__BagsPerTick`; see the svc-baggage-reclaim README).
 - **Flight numbers** use two-character airline codes (`AF`, `BA`, `U2`, `FR`, `KL`, `LH`, `VS`, `BY`) because both services only accept that shape.
 - **Ops dashboard (live):** open the `ops-dashboard` endpoint from the Aspire dashboard. It reads its own `ops-dashboard` subscription on **`flight-events`**, **`gate-events`** and **`baggage-events`** (all created by the AppHost) and keeps an in-memory view of the airport. Duplicate event ids are ignored and unreadable messages are dead-lettered. All three topics have **duplicate detection** on (10-minute window): publishers use deterministic message ids and retry failed sends from an outbox, so a copy that slipped through is dropped by the bus, and the dashboard drops any that remain ([ADR-0017](https://github.com/aeroflow-air/platform-handbook/blob/main/docs/decisions/0017-reliable-event-publishing.md)). The flight simulator also keeps unsent events and retries them next tick instead of dropping them. On startup it also loads the current flights, gates and belts from `svc-flight-status` (`/api/flights/departures/LHR` and `/arrivals/LHR`), `svc-gate-allocation` (`/api/gates`) and `svc-baggage-reclaim` (`/belts`) through service discovery, so a restart doesn't show an empty airport (platform-handbook#74). Events layer on top and win over the loaded data. A service that is down is retried every 5 s for about two minutes and named in the top bar (`snapshot 19:59:00 · no gates`); the **Refresh** button reloads on demand. Settings: `Snapshot__*` (for example `Snapshot__HomeAirport`).
-  - **Board:** LHR departures (gate from `gate-events`) and arrivals (belt from `baggage-events`); `TBA` until assigned.
+  - **`/` Overview** is the ops workbench: nav, health strip, snapshot refresh, the scenario control, and the existing panels.
+  - **`/board` is a fullscreen FIDS kiosk** (no nav, no scenario control): a live clock, split departures and arrivals boards (Time, Flight, Destination or Origin, Gate or Belt, Status) in LED / split-flap typography, and a baggage reclaim strip. The AeroFlow wordmark links back to Overview. Status colours cover Scheduled, Boarding, Departed, Delayed, Landed and Cancelled; gate and belt show `TBA` until assigned.
+
+    ![The /board FIDS kiosk](docs/fids-board.png)
+
   - **Gates:** a tile per gate seen in `gate-events`, showing the flight and on/off-block window, or free.
   - **Baggage belts:** each belt's flights moving through waiting, bags on belt, last bag and complete, with delayed bags counted.
   - **Event stream:** the latest 200 events across all three topics.

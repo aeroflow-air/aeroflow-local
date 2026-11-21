@@ -1,0 +1,61 @@
+@inherits LiveComponent
+
+<div class="fids-screen">
+    <h1 class="visually-hidden">Departures and arrivals</h1>
+    <div class="fids-boards">
+        <FidsBoardTable Title="Departures"
+                        Kicker="GATES OPEN"
+                        PlaceHeader="Destination"
+                        SlotHeader="Gate"
+                        Empty="No departures yet. Waiting for the flight simulator."
+                        Rows="Departing" />
+        <FidsBoardTable Title="Arrivals"
+                        Kicker="BAGGAGE IN HALL"
+                        PlaceHeader="Origin"
+                        SlotHeader="Belt"
+                        Empty="No arrivals yet. Waiting for the flight simulator."
+                        Rows="Arriving" />
+    </div>
+    <footer class="fids-reclaim">
+        <div class="fids-reclaim-head">
+            <h2>Baggage reclaim</h2>
+            <p>LAST BAG TIMES IN LOCAL · BELTS UPDATE FROM BAGGAGE-EVENTS</p>
+        </div>
+        @if (Hall.Count == 0)
+        {
+            <p class="fids-empty">No bags in hall yet.</p>
+        }
+        else
+        {
+            <div class="fids-belts">
+                @foreach (var r in Hall)
+                {
+                    <div @key="r.FlightId" class="fids-belt-card">
+                        <div class="fids-belt-no">@r.Belt</div>
+                        <div class="fids-belt-flight">@r.FlightNumber</div>
+                        <div class="fids-belt-status @StageClass(r.Stage)">@r.StageLabel</div>
+                        <div class="fids-belt-times">@(r.Times ?? "\u00A0")</div>
+                    </div>
+                }
+            </div>
+        }
+    </footer>
+</div>
+
+@code {
+    [Parameter] public string HomeAirport { get; set; } = FidsBoardMapper.DefaultHomeAirport;
+    [Parameter] public int MaxRows { get; set; } = FidsBoardMapper.DefaultBoardRows;
+    [Parameter] public int MaxReclaims { get; set; } = FidsBoardMapper.DefaultReclaimRows;
+
+    private IReadOnlyList<FidsFlightRow> Departing => FidsBoardMapper.Departures(View, HomeAirport, MaxRows);
+    private IReadOnlyList<FidsFlightRow> Arriving => FidsBoardMapper.Arrivals(View, HomeAirport, MaxRows);
+    private IReadOnlyList<FidsReclaimRow> Hall => FidsBoardMapper.Reclaims(View, MaxReclaims);
+
+    private static string StageClass(FidsReclaimKind stage) => stage switch
+    {
+        FidsReclaimKind.FirstBag => "first",
+        FidsReclaimKind.LastBag => "last",
+        FidsReclaimKind.Closed => "closed",
+        _ => "wait",
+    };
+}

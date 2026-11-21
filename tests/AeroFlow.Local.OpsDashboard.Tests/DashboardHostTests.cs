@@ -35,4 +35,28 @@ public sealed class DashboardHostTests(WebApplicationFactory<Program> factory) :
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Board_is_the_fids_kiosk_without_ops_chrome()
+    {
+        var html = await factory.CreateClient().GetStringAsync("/board");
+
+        Assert.Contains("DEPARTURES", html, StringComparison.Ordinal);
+        Assert.Contains("ARRIVALS", html, StringComparison.Ordinal);
+        Assert.Contains("fids-clock", html, StringComparison.Ordinal);
+        Assert.Contains("Baggage reclaim", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("flight-simulator · /scenarios", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("class=\"nav\"", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Overview_keeps_the_ops_workbench()
+    {
+        var html = await factory.CreateClient().GetStringAsync("/");
+
+        Assert.Contains("Overview", html, StringComparison.Ordinal);
+        Assert.Contains("class=\"nav\"", html, StringComparison.Ordinal);
+        Assert.Contains("Scenario", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("fids-clock", html, StringComparison.Ordinal);
+    }
 }
