@@ -1,0 +1,36 @@
+<section class="fids-board" aria-label="@Title">
+    <h2>@Title <span>@Kicker</span></h2>
+    @if (Rows.Count == 0)
+    {
+        <p class="fids-empty">@Empty</p>
+    }
+    else
+    {
+        <table class="fids-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Flight</th>
+                    <th>@PlaceHeader</th>
+                    <th>@SlotHeader</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Rows)
+                {
+                    <FidsRow @key="row.FlightId" Row="row" />
+                }
+            </tbody>
+        </table>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public string Kicker { get; set; } = "";
+    [Parameter, EditorRequired] public string PlaceHeader { get; set; } = "";
+    [Parameter, EditorRequired] public string SlotHeader { get; set; } = "";
+    [Parameter] public string Empty { get; set; } = "No flights yet.";
+    [Parameter] public IReadOnlyList<FidsFlightRow> Rows { get; set; } = [];
+}

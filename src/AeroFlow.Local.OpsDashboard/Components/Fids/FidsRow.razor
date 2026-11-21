@@ -1,0 +1,15 @@
+<tr class="status-@Row.Status.ToString().ToLowerInvariant()">
+    <td><span class="fids-sched">@FidsBoardMapper.Clock(Row.ScheduledTime)</span></td>
+    <td class="fids-flight">@Row.FlightNumber</td>
+    <td class="fids-place">@Row.Place</td>
+    <td class="fids-slot @(Row.Slot == "TBA" || Row.Slot == "—" ? "tba" : null)">
+        <FlapText Value="@Row.Slot" />
+    </td>
+    <td class="fids-status">
+        <FlapText Value="@Row.StatusLabel" />
+    </td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired] public FidsFlightRow Row { get; set; } = default!;
+}

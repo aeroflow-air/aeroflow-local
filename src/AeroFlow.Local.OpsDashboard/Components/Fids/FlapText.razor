@@ -1,0 +1,50 @@
+<span class="@(_flipping ? "flaps is-flipping" : "flaps")" aria-label="@Value">
+    @foreach (var ch in Value)
+    {
+        <span class="flap">@(ch == ' ' ? "\u00A0" : ch)</span>
+    }
+</span>
+
+@code {
+    private string _shown = "";
+    private bool _flipping;
+    private CancellationTokenSource? _flip;
+
+    [Parameter, EditorRequired] public string Value { get; set; } = "";
+
+    protected override void OnParametersSet()
+    {
+        if (_shown == Value)
+        {
+            return;
+        }
+
+        // First render just shows the text; later changes flip the cells.
+        var shouldFlip = _shown.Length > 0 && _shown != Value;
+        _shown = Value;
+        if (!shouldFlip)
+        {
+            return;
+        }
+
+        _flipping = true;
+        _flip?.Cancel();
+        _flip = new CancellationTokenSource();
+        var token = _flip.Token;
+        _ = FlipOff(token);
+    }
+
+    private async Task FlipOff(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(450, token);
+            _flipping = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (TaskCanceledException)
+        {
+            // A newer value started another flip.
+        }
+    }
+}
