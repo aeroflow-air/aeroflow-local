@@ -13,6 +13,20 @@ Production hosting stays on Azure Container Apps via `workload.yaml`. This repo 
 
 Optional: [Aspire workload / CLI](https://learn.microsoft.com/dotnet/aspire/fundamentals/setup-tooling) for `aspire run`. Plain `dotnet run` on the AppHost is enough — **no paid tooling**.
 
+
+Optional: a GitHub personal access token with the `read:packages` scope, stored in your **user-level** NuGet config (not this repository). GitHub Packages requires authentication even though the org is public. Once the sibling `svc-*` services restore `AeroFlow.ServiceDefaults` from `https://nuget.pkg.github.com/aeroflow-air/index.json` (0.1.1), `dotnet build` of this AppHost needs that token. Until those service PRs land, the siblings still restore from their committed `lib/packages` feeds and a token is not required. This repo does not create or store the token.
+
+```bash
+dotnet nuget add source https://nuget.pkg.github.com/aeroflow-air/index.json \
+  --name aeroflow-air \
+  --username YOUR_GITHUB_USERNAME \
+  --password YOUR_TOKEN \
+  --store-password-in-clear-text
+```
+
+If the source already exists, update the credentials instead of adding it twice. A source-only `nuget.config` in this repo makes the feed visible when restoring from the AppHost directory. Details: [lib-service-defaults consume guide](https://github.com/aeroflow-air/lib-service-defaults#consume).
+
+
 ## Clone layout (required)
 
 The AppHost uses **ProjectReference** to the real service repos. Clone them as **siblings** of this repo:
