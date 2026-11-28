@@ -132,4 +132,44 @@ var flightSimulator = builder.AddProject<Projects.AeroFlow_Local_FlightSimulator
 // and the simulator publishes the resulting lifecycle events to flight-events as usual.
 opsDashboard.WithReference(flightSimulator);
 
+// ---------------------------------------------------------------------------
+// Developer portal: Backstage (aeroflow-air/backstage, ADR-0024)
+// Runs the sibling checkout with `yarn start` (frontend :3000, backend :7007)
+// against a local Postgres container. Zero cost: OSS image, no Azure.
+// Skipped, not failed, when the checkout is missing, so the airport stack
+// still starts for anyone who has not cloned it.
+// ---------------------------------------------------------------------------
+var backstagePath = Path.GetFullPath(
+    builder.Configuration["Backstage:Path"] ?? "../../../backstage",
+    builder.AppHostDirectory);
+
+if (File.Exists(Path.Combine(backstagePath, "package.json")))
+{
+    var postgres = builder.AddPostgres("postgres");
+    var backstageDb = postgres.AddDatabase("backstage-db", databaseName: "backstage");
+
+    // Read-only GitHub token for catalogue discovery and the org import.
+    // Set it with user secrets (Parameters:github-token); never commit it.
+    var githubToken = builder.AddParameter("github-token", secret: true);
+
+    builder.AddJavaScriptApp("backstage", backstagePath, "start")
+        .WithYarn()
+        // Layer the Postgres block over the SQLite default. Paths are relative to
+        // each Backstage package directory, which is how `yarn start` resolves them.
+        .WithRunScript("start", ["--config", "../../app-config.yaml", "--config", "../../app-config.postgres.yaml"])
+        // Backstage binds its own fixed ports from app-config.yaml, so the endpoints
+        // are not proxied: Aspire just shows them in the dashboard.
+        .WithHttpEndpoint(port: 3000, name: "http", isProxied: false)
+        .WithHttpEndpoint(port: 7007, name: "backend", isProxied: false)
+        .WithExternalHttpEndpoints()
+        .WithEnvironment("POSTGRES_HOST", postgres.Resource.PrimaryEndpoint.Property(EndpointProperty.Host))
+        .WithEnvironment("POSTGRES_PORT", postgres.Resource.PrimaryEndpoint.Property(EndpointProperty.Port))
+        .WithEnvironment("POSTGRES_USER", postgres.Resource.UserNameReference)
+        .WithEnvironment("POSTGRES_PASSWORD", postgres.Resource.PasswordParameter)
+        .WithEnvironment("POSTGRES_DB", backstageDb.Resource.DatabaseName)
+        .WithEnvironment("GITHUB_ORG", "aeroflow-air")
+        .WithEnvironment("GITHUB_TOKEN", githubToken)
+        .WaitFor(backstageDb);
+}
+
 builder.Build().Run();
