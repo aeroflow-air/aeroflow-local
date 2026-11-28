@@ -37,6 +37,7 @@ parent/
   svc-gate-allocation/     ← https://github.com/aeroflow-air/svc-gate-allocation
   svc-flight-status/       ← https://github.com/aeroflow-air/svc-flight-status
   svc-baggage-reclaim/     ← https://github.com/aeroflow-air/svc-baggage-reclaim
+  backstage/               ← https://github.com/aeroflow-air/backstage (optional, developer portal)
 ```
 
 Example:
@@ -102,6 +103,7 @@ On the first start Docker will pull (free public images):
 - `mcr.microsoft.com/azure-messaging/servicebus-emulator:1.1.2`
 - `mcr.microsoft.com/mssql/server:2022-latest`
 - `quay.io/keycloak/keycloak:26.3`
+- `docker.io/library/postgres:18.3` (only if the `backstage` sibling is cloned)
 
 SQL + the emulator can take a few minutes; wait until the dashboard shows resources as **Running**.
 
@@ -224,6 +226,8 @@ Example (AppHost): `.WithEnvironment("Simulator__TickSeconds", "2")` or `.WithEn
 | **svc-baggage-reclaim** | Sibling project reference | Real service; belts and bags from `flight-events/baggage-reclaim`, publishes `baggage-events` |
 | **svc-turnaround** … **svc-terminal** | Placeholders in `src/placeholders/` | `/health` + `/ping`; log `flight-events` from their own subscription |
 | **flight-simulator** | Worker in this repo | Publishes simulated flight lifecycle events to `flight-events` |
+| **postgres** / **backstage-db** | Postgres container (`Aspire.Hosting.PostgreSQL`), database `backstage` | Only with the `backstage` sibling; see [Developer portal](#developer-portal-backstage) |
+| **backstage** | Sibling `backstage` checkout, `yarn start` (`Aspire.Hosting.JavaScript`) | Developer portal UI on **:3000**, backend on **:7007** |
 
 Service discovery and connection strings are injected by the AppHost — no hand-set local secrets for the happy path.
 
@@ -235,6 +239,59 @@ Service discovery and connection strings are injected by the AppHost — no hand
 - Apache-2.0 licensed
 
 Exact Entra product choice remains with #51; this is the local plug-in only.
+
+## Developer portal (Backstage)
+
+The AppHost can also run the [AeroFlow Air developer portal](https://github.com/aeroflow-air/backstage)
+(ADR-0024, [platform-handbook#123](https://github.com/aeroflow-air/platform-handbook/pull/123)) against a local
+Postgres container. It is **optional**: if there is no Backstage checkout, the AppHost skips the `backstage`,
+`postgres` and `backstage-db` resources and the airport stack starts as before.
+
+**Extra prerequisites:** Node 24 with Corepack enabled (`corepack enable`), so `yarn` resolves to the
+version pinned in the Backstage repo. Docker for Postgres, as for the rest of the stack.
+
+1. Clone it as a sibling (see [Clone layout](#clone-layout-required)):
+
+   ```bash
+   cd ~/aeroflow && gh repo clone aeroflow-air/backstage
+   ```
+
+   Somewhere else? Point the AppHost at it with `Backstage:Path` (absolute, or relative to the AppHost
+   directory), for example `dotnet user-secrets set Backstage:Path /src/backstage` in
+   `src/AeroFlow.Local.AppHost`, or the `Backstage__Path` environment variable. No submodule and no
+   vendored copy: the Backstage repo keeps its own CI and releases, the same as the `svc-*` siblings.
+
+2. Give it a read-only GitHub token (classic PAT: `public_repo`, `read:org`, `read:user`, `user:email`; see
+   the Backstage README for why). Store it in user secrets, never in the repo:
+
+   ```bash
+   cd src/AeroFlow.Local.AppHost
+   dotnet user-secrets set Parameters:github-token <token>
+   ```
+
+   If it is not set, the Aspire dashboard asks for it on start.
+
+3. Run the AppHost as usual. The `backstage` resource runs `yarn install` first (a separate installer resource), then
+   `yarn start --config ../../app-config.yaml --config ../../app-config.postgres.yaml` after `backstage-db`
+   is healthy. Open **http://localhost:3000** and sign in as guest (local only). The first `yarn install`
+   and frontend build take a few minutes.
+
+Environment the AppHost passes to Backstage (names match `app-config.postgres.yaml` and
+`app-config.production.yaml` in the Backstage repo):
+
+| Variable | Value |
+|----------|-------|
+| `POSTGRES_HOST` | `postgres` endpoint host |
+| `POSTGRES_PORT` | `postgres` endpoint host port |
+| `POSTGRES_USER` | `postgres` user name reference |
+| `POSTGRES_PASSWORD` | generated `postgres-password` parameter |
+| `POSTGRES_DB` | `backstage` (one database, a schema per plugin) |
+| `GITHUB_ORG` | `aeroflow-air` |
+| `GITHUB_TOKEN` | `github-token` parameter (secret) |
+
+Backstage binds its own fixed ports (3000 and 7007 from its `app-config.yaml`), so both endpoints are
+unproxied and marked external so they show in the dashboard. Nothing here is hosted or deployed: running
+Backstage anywhere but locally is a separate, future decision.
 
 ## Add a new service
 
@@ -255,6 +312,7 @@ Requires the sibling clone layout above.
 ## Related
 
 - Planning ADR: [ADR-0014](https://github.com/aeroflow-air/platform-handbook/blob/main/docs/decisions/0014-aspire-local-development.md)
+- Developer portal: [aeroflow-air/backstage](https://github.com/aeroflow-air/backstage), ADR-0024 ([platform-handbook#123](https://github.com/aeroflow-air/platform-handbook/pull/123))
 - Event bus ADR: [ADR-0013](https://github.com/aeroflow-air/platform-handbook/blob/main/docs/decisions/0013-central-event-bus.md)
 - Implementation issue: [platform-handbook#55](https://github.com/aeroflow-air/platform-handbook/issues/55)
 - Planning issue: [platform-handbook#54](https://github.com/aeroflow-air/platform-handbook/issues/54)
