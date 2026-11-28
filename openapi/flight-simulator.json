@@ -1,0 +1,71 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "AeroFlow Flight Simulator API",
+    "description": "Local demo controls for the flight simulator: list flights that can be delayed and ask for a delay. Changes only the simulated flights; everything downstream arrives as normal flight-events.",
+    "version": "v1"
+  },
+  "paths": {
+    "/scenarios/flights": {
+      "get": {
+        "tags": [
+          "AeroFlow.Local.FlightSimulator"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/scenarios/delay": {
+      "post": {
+        "tags": [
+          "AeroFlow.Local.FlightSimulator"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DelayRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DelayRequest": {
+        "type": "object",
+        "properties": {
+          "flightNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "minutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "AeroFlow.Local.FlightSimulator"
+    }
+  ]
+}
