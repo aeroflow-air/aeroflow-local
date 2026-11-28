@@ -1,6 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
+    <!-- OpenAPI document only (ADR-0015 on net8: Swashbuckle for the spec, no UI package). -->
+    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="10.3.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="10.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../AeroFlow.Local.ServiceDefaults/AeroFlow.Local.ServiceDefaults.csproj" />
     <ProjectReference Include="../AeroFlow.Local.FlightEvents/AeroFlow.Local.FlightEvents.csproj" />
   </ItemGroup>
