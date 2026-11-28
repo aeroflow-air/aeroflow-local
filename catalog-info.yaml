@@ -1,0 +1,105 @@
+# Backstage catalogue entry for this repo (ADR-0024, platform-handbook#123).
+# Discovered by the aeroflow-air Backstage instance (aeroflow-air/backstage).
+# Domains, Systems and the event-bus Resource live in platform-handbook/catalog/.
+#
+# This repo holds several things, so it has one entity per deployable: the
+# AppHost itself, the flight simulator (owner of flight-events) and the ops
+# dashboard. The placeholder APIs (turnaround, cleaning, catering, pushback,
+# terminal) are not catalogued until they do real work.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: aeroflow-local
+  title: AeroFlow local (Aspire AppHost)
+  description: >-
+    Runs the whole airport locally with .NET Aspire (ADR-0014): Service Bus
+    emulator, Keycloak identity stand-in, flight simulator, ops dashboard and
+    the svc-* repos cloned as siblings. Local inner loop only; deploys stay on
+    Container Apps through workload.yaml.
+  annotations:
+    github.com/project-slug: aeroflow-air/aeroflow-local
+  tags:
+    - dotnet
+    - aspire
+spec:
+  type: tool
+  lifecycle: experimental
+  owner: group:platform
+  system: developer-platform
+  dependsOn:
+    - resource:event-bus
+    - component:svc-gate-allocation
+    - component:svc-flight-status
+    - component:svc-baggage-reclaim
+    - component:flight-simulator
+    - component:ops-dashboard
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: flight-simulator
+  title: Flight simulator
+  description: >-
+    Invents flights at LHR and publishes their lifecycle (Scheduled, Delayed,
+    Boarding, Departed, Landed, Cancelled) to flight-events. Local only.
+  annotations:
+    github.com/project-slug: aeroflow-air/aeroflow-local
+  tags:
+    - dotnet
+    - service-bus
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:platform
+  system: airport
+  providesApis:
+    - flight-events
+  dependsOn:
+    - resource:event-bus
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ops-dashboard
+  title: Ops dashboard
+  description: >-
+    Blazor Server dashboard (ADR-0016): live board, gates, belts and event
+    stream from Service Bus listeners, seeded from the services' read APIs.
+    Local only.
+  annotations:
+    github.com/project-slug: aeroflow-air/aeroflow-local
+  tags:
+    - dotnet
+    - blazor
+spec:
+  type: website
+  lifecycle: experimental
+  owner: group:platform
+  system: airport
+  consumesApis:
+    - flight-events
+    - gate-events
+    - baggage-events
+  dependsOn:
+    - resource:event-bus
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: flight-events
+  title: flight-events topic
+  description: >-
+    Event contract for the flight-events topic, owned by the flight simulator
+    (ADR-0019). Canonical examples in contracts/flight-events/.
+  annotations:
+    github.com/project-slug: aeroflow-air/aeroflow-local
+  links:
+    - url: https://github.com/aeroflow-air/aeroflow-local/tree/main/contracts/flight-events
+      title: Contract examples
+spec:
+  type: event-contract
+  lifecycle: experimental
+  owner: group:platform
+  system: airport
+  definition:
+    $text: ./contracts/README.md
